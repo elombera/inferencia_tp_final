@@ -10,3 +10,4 @@ a
 ## Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia"
 ## cuando es tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual 
 ## a 3600.
+## usando mutate --- 
