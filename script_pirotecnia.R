@@ -6,3 +6,5 @@ a = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
   geom_point()+
   facet_grid(fecha~punto)
 a
+
+## un push de dario
