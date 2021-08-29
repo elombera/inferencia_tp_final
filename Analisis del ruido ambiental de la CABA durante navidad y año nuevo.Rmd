@@ -1,0 +1,73 @@
+---
+title: "Analisis del ruido ambiental de la CABA durante navidad y año nuevo"
+author: "Joaquin Cerviño, Dario Ruiz y Esteban Lombera"
+date: "8/29/2021"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+    theme: united
+    highlight: pygments
+    toc: true
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggpubr)
+
+```
+
+## Introducción y descripción de datos
+El presente trabajo pretende analizar como varia el nivel de ruido ambiental en la Ciudad Autónoma de Buenos Aires (CABA) durante las fechas festivas (específicamente navidad y año nuevo). Para ello, se realizaron medidas de ruido en 7 puntos (n = 7) de la CABA según su normativa vigente ([link](https://www.argentina.gob.ar/normativa/provincial/ley-1540-123456789-0abc-defg-045-1000xvorpyel)). La figura XXX muestra la distribucion de los puntos de medida.
+
+<div>
+<p style = 'text-align:center;'>
+<img src="https://raw.githubusercontent.com/elombera/inferencia_tp_final/main/data/mapa.png" width="300px">
+</p>
+</div>
+
+Cada sonómetro realizo mediciones de nivel de presión sonora en dBA cada 1 segundo a lo largo de 2 horas. Desde las 23:00hs hasta las 01:00hs. Las fechas de medición fueron iniciadas los días 24/12/2020 (Navidad) y 31/12/2020 (Año nuevo); y finalizadas los días 25/12/2020 y 1/1/2021 respectivamente.
+
+La tabla XXX muestra los datos obtenidos.
+```{r rows.print=6,message=FALSE, warning=FALSE}
+tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+tabla.datos
+
+```
+La figura XXX muestra gráficamente los niveles de presión sonora en dBA a lo largo de los 7200 segundo (1 datos por segundo durante 2 horas) por cada punto de medida para las dos fechas (Navidad y Año nuevo)
+
+```{r fig-margin2, fig.margin=TRUE, fig.dim = c(10, 6), fig.align="center"}
+figura1 = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
+          geom_point(alpha = 0.3)+
+          facet_grid(fecha~punto)+
+          theme_pubr(base_size = 12, margin = TRUE)+
+          scale_x_continuous(name= "Tiempo [seg]", breaks=c(0,3500,7000), labels=c("0","3k5","7k")) +
+          labs(y = "Nivel de presión [dBA]") +
+          theme(legend.position = "top",
+                legend.title = element_blank())
+figura1
+
+```
+
+## Hipótesis de trabajo
+
+Pretendemos analizar estos datos a fin de responder las siguientes hipótesis:
+
+H1: El nivel de ruido ambiental en la CABA es significativamente mayor durante los festejos de navidad y año nuevo
+H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es significativamente mayor que durante navidad
+H3: Una buena manera de caracterizar el ruido generado por la pirotecnia en CABA es realizando medidas durante los primeros 15 minutos, ya que representan la mayor concentración de energía.
+
+## Manipulación de datos
+ - Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia" cuando el tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual a 3600. Usar mutate --- 
+ - Agregar una columna quea sea "Intervalo" que sea "15min" (de 23:45 a 23:59 o de 00:00 a 00:15), "30 min (de 23:30 a 23:59 o de 00:00 a 00:30), "45min" (de 23:15 a 23:59 o de 00:00 a 00:45), "60min" (de 23:00 a 23:59 o de 00:00 a 01:00)
+ - Calcular los valores promedios... ojo que tenemos los datos en "dB"
+
+## Análisis estadistico
+
+## Resultados
+
+## Conclusión
+
+
