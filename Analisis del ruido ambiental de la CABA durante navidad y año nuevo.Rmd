@@ -56,7 +56,9 @@ figura1
 Pretendemos analizar estos datos a fin de responder las siguientes hipótesis:
 
 H1: El nivel de ruido ambiental en la CABA es significativamente mayor durante los festejos de navidad y año nuevo
+
 H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es significativamente mayor que durante navidad
+
 H3: Una buena manera de caracterizar el ruido generado por la pirotecnia en CABA es realizando medidas durante los primeros 15 minutos, ya que representan la mayor concentración de energía.
 
 ## Manipulación de datos
