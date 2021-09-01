@@ -56,7 +56,7 @@ figura_anio_nuevo_spl_avg = intervalo_spl %>%
   facet_wrap(punto~.)+
   labs(x = "Intervalos de 15 minutos",
        y = "SPL",
-       title = "SPL promedio cada 15 minutos para Navidad") +
+       title = "SPL promedio cada 15 minutos para Año Nuevo") +
   theme_minimal()
 
 figura_anio_nuevo_spl_avg            
