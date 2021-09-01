@@ -16,7 +16,9 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggpubr)
-
+library(magrittr)
+library(purrr)
+library(dplyr)
 ```
 
 ## Introducción y descripción de datos
@@ -65,7 +67,55 @@ H3: Una buena manera de caracterizar el ruido generado por la pirotecnia en CABA
  - Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia" cuando el tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual a 3600. Usar mutate --- 
  - Agregar una columna quea sea "Intervalo" que sea "15min" (de 23:45 a 23:59 o de 00:00 a 00:15), "30 min (de 23:30 a 23:59 o de 00:00 a 00:30), "45min" (de 23:15 a 23:59 o de 00:00 a 00:45), "60min" (de 23:00 a 23:59 o de 00:00 a 01:00)
  - Calcular los valores promedios... ojo que tenemos los datos en "dB"
+ 
+```{r eval=TRUE, echo=TRUE}
+datos <- tabla.datos %>%
+  mutate(condicion = case_when(
+    tiempo <= 3600 ~ 'sin_pirotecnia',
+    tiempo > 3600 ~ 'con_pirotecnia',
+  ))
 
+
+datos  %<>%  mutate(intervalo_min = case_when(
+      tiempo <= 900 ~  15,
+      tiempo <= 1800 ~ 30,
+      tiempo <= 2700 ~ 45,
+      tiempo <= 3600 ~ 60,
+      tiempo <= 4500 ~ 75,
+      tiempo <= 5400 ~ 90,
+      tiempo <= 6300 ~ 105,
+      tiempo <= 7200 ~ 120,
+    ))
+
+intervalo_spl <- datos %>%
+  group_by(punto,fecha,intervalo_min,condicion) %>%
+  summarise(nivel_sonoro_avg = 10*log10(sum(10^(nivel_sonoro/10))/n()))
+
+figura_navidad_spl_avg = intervalo_spl %>%
+  filter(fecha=='Navidad') %>%
+  ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
+  geom_line()+
+  facet_wrap(punto~.)+
+  labs(x = "Intervalos de 15 minutos",
+       y = "SPL",
+       title = "SPL promedio cada 15 minutos para Navidad") +
+  theme_minimal()
+
+figura_navidad_spl_avg
+
+figura_anio_nuevo_spl_avg = intervalo_spl %>%
+  filter(fecha!='Navidad') %>%
+  ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
+  geom_line()+
+  facet_wrap(punto~.)+
+  labs(x = "Intervalos de 15 minutos",
+       y = "SPL",
+       title = "SPL promedio cada 15 minutos para Navidad") +
+  theme_minimal()
+
+figura_anio_nuevo_spl_avg   
+
+```
 ## Análisis estadistico
 
 ## Resultados

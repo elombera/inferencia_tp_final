@@ -1,6 +1,7 @@
 library(tidyverse)
 library(magrittr)
 library(purrr)
+library(dplyr)
 
 tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
@@ -21,7 +22,6 @@ datos <- tabla.datos %>%
     tiempo > 3600 ~ 'con_pirotecnia',
   ))
 
-
 datos  %<>%  mutate(intervalo_min = case_when(
       tiempo <= 900 ~  15,
       tiempo <= 1800 ~ 30,
@@ -33,4 +33,32 @@ datos  %<>%  mutate(intervalo_min = case_when(
       tiempo <= 7200 ~ 120,
     ))
 
-intervalos <- datos %>% group_by(intervalo)
+intervalo_spl <- datos %>%
+  group_by(punto,fecha,intervalo_min,condicion) %>%
+  summarise(nivel_sonoro_avg = 10*log10(sum(10^(nivel_sonoro/10))/n()))
+
+figura_navidad_spl_avg = intervalo_spl %>%
+  filter(fecha=='Navidad') %>%
+  ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
+  geom_line()+
+  facet_wrap(punto~.)+
+  labs(x = "Intervalos de 15 minutos",
+       y = "SPL",
+       title = "SPL promedio cada 15 minutos para Navidad") +
+  theme_minimal()
+
+figura_navidad_spl_avg
+
+figura_anio_nuevo_spl_avg = intervalo_spl %>%
+  filter(fecha!='Navidad') %>%
+  ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
+  geom_line()+
+  facet_wrap(punto~.)+
+  labs(x = "Intervalos de 15 minutos",
+       y = "SPL",
+       title = "SPL promedio cada 15 minutos para Navidad") +
+  theme_minimal()
+
+figura_anio_nuevo_spl_avg            
+
+install.packages(ggpubr)
