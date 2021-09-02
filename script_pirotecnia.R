@@ -2,6 +2,7 @@ library(tidyverse)
 library(magrittr)
 library(purrr)
 library(dplyr)
+library(ggpubr)
 
 tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
@@ -61,4 +62,4 @@ figura_anio_nuevo_spl_avg = intervalo_spl %>%
 
 figura_anio_nuevo_spl_avg            
 
-install.packages(ggpubr)
+#install.packages("ggpubr")
