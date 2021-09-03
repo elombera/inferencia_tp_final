@@ -62,4 +62,14 @@ figura_anio_nuevo_spl_avg = intervalo_spl %>%
 
 figura_anio_nuevo_spl_avg            
 
-#install.packages("ggpubr")
+# modelo lineal y visualización
+
+m1 <- lm(nivel_sonoro_avg ~ intervalo_min, data = p1_spl)
+summary(m1)
+
+m1 %>% 
+  ggplot(aes(x = intervalo_min, y = nivel_sonoro_avg)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+
