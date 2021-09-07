@@ -103,3 +103,26 @@ install.packages("seewave", repos="http://cran.at.r-project.org/")
 estadistica <- datos %>%
   group_by(punto,fecha) %>%
   summarize(M = 10*log10(sum(10^(nivel_sonoro/10))/n()))
+
+navidad_p1_stats <- estadistica %>%
+  filter('fecha' == 'Navidad')
+
+punto_1 <- estadistica %>%
+  filter(punto == 'P1')
+
+histograma <- navidad_p1_sin_pirotecnia %>% 
+  with(hist(nivel_sonoro, breaks = c(seq(58,80,by =1)), plot = FALSE)) %$% 
+  tibble(from    = head(breaks, -1),
+         to      = tail(breaks, -1), 
+         mids    = mids,
+         counts  = counts, 
+         density = density)
+
+ggplot(histograma, aes(x = mids, y = counts)) + geom_col(color='black', fill='white') #width = 0.5)
+
+densidad = tibble(x = seq(from=58, to=80, by=0.1)) %>% mutate(pdf = dnorm(x, mean=66.51844, sd=16.17648))
+densidad
+
+
+ggplot() + geom_col(data = histograma, aes(x = mids, y=density), color='black', fill='white') + #width = 0.5,
+  geom_line(data = densidad, aes(x = x, y = pdf), color = 'orange')
