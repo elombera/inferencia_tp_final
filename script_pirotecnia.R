@@ -3,6 +3,7 @@ library(magrittr)
 library(purrr)
 library(dplyr)
 library(ggpubr)
+library(seewave)
 
 tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
@@ -22,6 +23,12 @@ datos <- tabla.datos %>%
     tiempo <= 3600 ~ 'sin_pirotecnia',
     tiempo > 3600 ~ 'con_pirotecnia',
   ))
+
+# tengo un problema de encoding con la ñ de columna Año Nuevo
+datos %<>% mutate(fecha = case_when(
+  fecha != 'Navidad' ~ 'Anio_nuevo',
+  fecha == 'Navidad' ~ 'Navidad',
+))
 
 datos  %<>%  mutate(intervalo_min = case_when(
       tiempo <= 900 ~  15,
@@ -72,4 +79,27 @@ m1 %>%
   geom_point() +
   geom_smooth(method = lm)
 
+# calcular media muestral de acuerdo a punto, fecha y condicion
+estadistica <- datos %>%
+  group_by(punto,fecha) %>%
+  summarize(M = 10*log10(sum(10^(nivel_sonoro/10))/n()))
 
+#calcular media muestral de dbs usando seewave
+estadistica <- datos %>%
+  group_by(punto,fecha) %>%
+  summarize(M =meandB(nivel_sonoro, level="IL"))
+  
+# da el mismo resultado la formulita que meti yo
+# que lo que devuelve la biblioteca jeje ;)
+desviacion <- datos %>%
+  group_by(punto,fecha) %>%
+  summarize(S =sddB(nivel_sonoro, level="IL"))
+
+estadistica %<>% inner_join(desviacion)
+
+#calcular desviacion estandar de dbs usando seewave
+install.packages("seewave", repos="http://cran.at.r-project.org/")
+
+estadistica <- datos %>%
+  group_by(punto,fecha) %>%
+  summarize(M = 10*log10(sum(10^(nivel_sonoro/10))/n()))
