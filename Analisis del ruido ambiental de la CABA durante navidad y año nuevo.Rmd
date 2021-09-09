@@ -19,6 +19,8 @@ library(ggpubr)
 library(magrittr)
 library(purrr)
 library(dplyr)
+library(seewave)
+library(nlme)
 ```
 
 ## Introducción y descripción de datos
@@ -36,6 +38,8 @@ La tabla XXX muestra los datos obtenidos.
 ```{r rows.print=6,message=FALSE, warning=FALSE}
 tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 tabla.datos
+tabla.datosAPRA = read.csv("./data/datosRAPRAFINAL2.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+tabla.datosAPRA
 
 ```
 La figura XXX muestra gráficamente los niveles de presión sonora en dBA a lo largo de los 7200 segundo (1 datos por segundo durante 2 horas) por cada punto de medida para las dos fechas (Navidad y Año nuevo)
@@ -61,65 +65,111 @@ H1: El nivel de ruido ambiental en la CABA es significativamente mayor durante l
 
 H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es significativamente mayor que durante navidad
 
-H3: Una buena manera de caracterizar el ruido generado por la pirotecnia en CABA es realizando medidas durante los primeros 15 minutos, ya que representan la mayor concentración de energía.
-
 ## Manipulación de datos
  - Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia" cuando el tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual a 3600. Usar mutate --- 
- - Agregar una columna quea sea "Intervalo" que sea "15min" (de 23:45 a 23:59 o de 00:00 a 00:15), "30 min (de 23:30 a 23:59 o de 00:00 a 00:30), "45min" (de 23:15 a 23:59 o de 00:00 a 00:45), "60min" (de 23:00 a 23:59 o de 00:00 a 01:00)
- - Calcular los valores promedios... ojo que tenemos los datos en "dB"
- 
+
 ```{r eval=TRUE, echo=TRUE}
-datos <- tabla.datos %>%
+tabla.datos <- tabla.datos %>%
   mutate(condicion = case_when(
     tiempo <= 3600 ~ 'sin_pirotecnia',
     tiempo > 3600 ~ 'con_pirotecnia',
   ))
 
 
-datos  %<>%  mutate(intervalo_min = case_when(
-      tiempo <= 900 ~  15,
-      tiempo <= 1800 ~ 30,
-      tiempo <= 2700 ~ 45,
-      tiempo <= 3600 ~ 60,
-      tiempo <= 4500 ~ 75,
-      tiempo <= 5400 ~ 90,
-      tiempo <= 6300 ~ 105,
-      tiempo <= 7200 ~ 120,
-    ))
+tabla.datos.promedio <- tabla.datos %>%
+  group_by(fecha,condicion) %>%
+  summarise(nivel_sonoro_mean = meandB(nivel_sonoro, level = "IL"),
+            nivel_sonoro_sd = sddB(nivel_sonoro, level = "IL"))
 
-intervalo_spl <- datos %>%
-  group_by(punto,fecha,intervalo_min,condicion) %>%
-  summarise(nivel_sonoro_avg = 10*log10(sum(10^(nivel_sonoro/10))/n()))
+tabla.datos.promedioMAL <- tabla.datos %>%
+  group_by(fecha,condicion) %>%
+  summarise(nivel_sonoro_mean = mean(nivel_sonoro),
+            nivel_sonoro_sd = sd(nivel_sonoro))
 
-figura_navidad_spl_avg = intervalo_spl %>%
-  filter(fecha=='Navidad') %>%
-  ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
-  geom_line()+
-  facet_wrap(punto~.)+
-  labs(x = "Intervalos de 15 minutos",
-       y = "SPL",
-       title = "SPL promedio cada 15 minutos para Navidad") +
-  theme_minimal()
 
-figura_navidad_spl_avg
-
-figura_anio_nuevo_spl_avg = intervalo_spl %>%
-  filter(fecha!='Navidad') %>%
-  ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
-  geom_line()+
-  facet_wrap(punto~.)+
-  labs(x = "Intervalos de 15 minutos",
-       y = "SPL",
-       title = "SPL promedio cada 15 minutos para Navidad") +
-  theme_minimal()
-
-figura_anio_nuevo_spl_avg   
+fig = ggplot(tabla.datos, aes(x = condicion, y = nivel_sonoro, color = condicion))+
+      geom_jitter(width = 0.1, alpha = 0.1)+
+      geom_boxplot()+
+      facet_grid(fecha~.)+
+      theme_pubr(base_size = 12, margin = TRUE)+
+      labs(y = "Nivel de presión [dBA]", x = "Condicion") +
+      theme(legend.position = "top",
+            legend.title = element_blank())
+fig
 
 ```
+
+
 ## Análisis estadistico
+```{r Estadisitca eval=TRUE, echo=TRUE}
+modelo1 = lm(nivel_sonoro ~ fecha*condicion, 
+             data = tabla.datos)
+
+# nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
+summary(modelo1)
+library(car)
+Anova(modelo1, type = 3)
+```
+
 
 ## Resultados
 
 ## Conclusión
 
+Debug
+
+```{r debug eval=TRUE, echo=TRUE}
+
+# tabla.datos.promedio4 <- tabla.datos %>%
+#   group_by(fecha,condicion) %>%
+#   summarise(nivel_sonoro_mean = meandB(nivel_sonoro),
+#             nivel_sonoro_sd = sddB(nivel_sonoro))
+# 
+# tabla.datos.promedio3 <- tabla.datos %>%
+#   group_by(fecha,condicion) %>%
+#   summarise(nivel_sonoro_mean = 10*log10(sum(10^(nivel_sonoro/10))/n()),
+#             nivel_sonoro_sd = sd(10*log10(sum(10^(nivel_sonoro/10))/n())))
+# 
+# 
+# 
+# datos  %<>%  mutate(intervalo_min = case_when(
+#       tiempo <= 900 ~  15,
+#       tiempo <= 1800 ~ 30,
+#       tiempo <= 2700 ~ 45,
+#       tiempo <= 3600 ~ 60,
+#       tiempo <= 4500 ~ 75,
+#       tiempo <= 5400 ~ 90,
+#       tiempo <= 6300 ~ 105,
+#       tiempo <= 7200 ~ 120,
+#     ))
+# 
+# intervalo_spl <- datos %>%
+#   group_by(punto,fecha,intervalo_min,condicion) %>%
+#   summarise(nivel_sonoro_avg = 10*log10(sum(10^(nivel_sonoro/10))/n()))
+# 
+# figura_navidad_spl_avg = intervalo_spl %>%
+#   filter(fecha=='Navidad') %>%
+#   ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
+#   geom_line()+
+#   facet_wrap(punto~.)+
+#   labs(x = "Intervalos de 15 minutos",
+#        y = "SPL",
+#        title = "SPL promedio cada 15 minutos para Navidad") +
+#   theme_minimal()
+# 
+# figura_navidad_spl_avg
+# 
+# figura_anio_nuevo_spl_avg = intervalo_spl %>%
+#   filter(fecha!='Navidad') %>%
+#   ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
+#   geom_line()+
+#   facet_wrap(punto~.)+
+#   labs(x = "Intervalos de 15 minutos",
+#        y = "SPL",
+#        title = "SPL promedio cada 15 minutos para Navidad") +
+#   theme_minimal()
+# 
+# figura_anio_nuevo_spl_avg   
+
+```
 
