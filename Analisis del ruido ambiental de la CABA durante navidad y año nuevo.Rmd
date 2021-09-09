@@ -68,28 +68,22 @@ H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es
 ## Manipulación de datos
  - Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia" cuando el tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual a 3600. Usar mutate --- 
 
-```{r eval=TRUE, echo=TRUE}
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
 tabla.datos <- tabla.datos %>%
   mutate(condicion = case_when(
     tiempo <= 3600 ~ 'sin_pirotecnia',
     tiempo > 3600 ~ 'con_pirotecnia',
   ))
 
-
 tabla.datos.promedio <- tabla.datos %>%
-  group_by(fecha,condicion) %>%
-  summarise(nivel_sonoro_mean = meandB(nivel_sonoro, level = "IL"),
-            nivel_sonoro_sd = sddB(nivel_sonoro, level = "IL"))
-
-tabla.datos.promedioMAL <- tabla.datos %>%
   group_by(fecha,condicion) %>%
   summarise(nivel_sonoro_mean = mean(nivel_sonoro),
             nivel_sonoro_sd = sd(nivel_sonoro))
-
+tabla.datos.promedioMAL
 
 fig = ggplot(tabla.datos, aes(x = condicion, y = nivel_sonoro, color = condicion))+
       geom_jitter(width = 0.1, alpha = 0.1)+
-      geom_boxplot()+
+      # geom_boxplot()+
       facet_grid(fecha~.)+
       theme_pubr(base_size = 12, margin = TRUE)+
       labs(y = "Nivel de presión [dBA]", x = "Condicion") +
@@ -101,14 +95,31 @@ fig
 
 
 ## Análisis estadistico
-```{r Estadisitca eval=TRUE, echo=TRUE}
-modelo1 = lm(nivel_sonoro ~ fecha*condicion, 
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+modelo1 = lm(nivel_sonoro ~ fecha*condicion + punto,
              data = tabla.datos)
 
 # nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
 summary(modelo1)
-library(car)
-Anova(modelo1, type = 3)
+Anova(modelo1)
+```
+
+
+
+
+
+
+
+
+
+
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+modelo1 = lmer(nivel_sonoro ~ fecha*condicion + (1|punto),
+             data = tabla.datos)
+
+# nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
+summary(modelo1)
+Anova(modelo1)
 ```
 
 
@@ -118,7 +129,7 @@ Anova(modelo1, type = 3)
 
 Debug
 
-```{r debug eval=TRUE, echo=TRUE}
+```{r eval=TRUE, echo=TRUE}
 
 # tabla.datos.promedio4 <- tabla.datos %>%
 #   group_by(fecha,condicion) %>%
