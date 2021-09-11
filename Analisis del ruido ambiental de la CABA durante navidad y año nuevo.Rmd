@@ -31,7 +31,7 @@ library(leaflet)
 El presente trabajo pretende analizar como varia el nivel de ruido ambiental en la Ciudad Autónoma de Buenos Aires (CABA) durante las fechas festivas (específicamente navidad y año nuevo). Para ello, se realizaron medidas de ruido en 7 puntos (n = 7) de la CABA según su normativa vigente ([link](https://www.argentina.gob.ar/normativa/provincial/ley-1540-123456789-0abc-defg-045-1000xvorpyel)). La figura XXX muestra la distribucion de los puntos de medida.
 
 ```{r fig-margin0, fig.margin=TRUE, fig.dim = c(10, 6), fig.align="center"}
-mapa.puntos = read.csv("../../puntos.csv", header = TRUE, sep = ',', stringsAsFactors = TRUE)
+mapa.puntos = read.csv("./data/puntos.csv", header = TRUE, sep = ',', stringsAsFactors = TRUE)
 lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
 mapa.puntos$lat <- c(as.numeric(lat))
 lng =  char2dms(as.character(mapa.puntos$Longitud), chd="°",chm="\'",chs="\"")
