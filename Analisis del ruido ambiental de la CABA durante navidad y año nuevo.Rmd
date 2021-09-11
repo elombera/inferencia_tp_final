@@ -21,11 +21,35 @@ library(purrr)
 library(dplyr)
 library(seewave)
 library(nlme)
+library(car)
+library(lme4)
+library(sp)
+library(leaflet)
 ```
 
 ## Introducción y descripción de datos
 El presente trabajo pretende analizar como varia el nivel de ruido ambiental en la Ciudad Autónoma de Buenos Aires (CABA) durante las fechas festivas (específicamente navidad y año nuevo). Para ello, se realizaron medidas de ruido en 7 puntos (n = 7) de la CABA según su normativa vigente ([link](https://www.argentina.gob.ar/normativa/provincial/ley-1540-123456789-0abc-defg-045-1000xvorpyel)). La figura XXX muestra la distribucion de los puntos de medida.
 
+```{r fig-margin0, fig.margin=TRUE, fig.dim = c(10, 6), fig.align="center"}
+mapa.puntos = read.csv("../../puntos.csv", header = TRUE, sep = ',', stringsAsFactors = TRUE)
+lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
+mapa.puntos$lat <- c(as.numeric(lat))
+lng =  char2dms(as.character(mapa.puntos$Longitud), chd="°",chm="\'",chs="\"")
+mapa.puntos$lng <- c(as.numeric(lng))
+mapa.puntos %<>% mutate(
+  lat = case_when(
+    lat < 0 ~ lat,
+    lat > 0 ~ lat * -1
+  )
+)
+map <- leaflet() %>%
+  addTiles() %>%
+  addMarkers(lng = mapa.puntos$lng, lat= mapa.puntos$lat,
+             popup = mapa.puntos$Barrio...Comuna)
+
+map
+
+```
 <div>
 <p style = 'text-align:center;'>
 <img src="https://raw.githubusercontent.com/elombera/inferencia_tp_final/main/data/mapa.png" width="300px">
@@ -38,8 +62,13 @@ La tabla XXX muestra los datos obtenidos.
 ```{r rows.print=6,message=FALSE, warning=FALSE}
 tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 tabla.datos
-tabla.datosAPRA = read.csv("./data/datosRAPRAFINAL2.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
-tabla.datosAPRA
+tabla.datos %<>% mutate(fecha = case_when(
+  fecha != 'Navidad' ~ 'Año_nuevo',
+  fecha == 'Navidad' ~ 'Navidad',
+))
+# falta esta tabla en directorio datos
+#tabla.datosAPRA = read.csv("./data/datosRAPRAFINAL2.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+#tabla.datosAPRA
 
 ```
 La figura XXX muestra gráficamente los niveles de presión sonora en dBA a lo largo de los 7200 segundo (1 datos por segundo durante 2 horas) por cada punto de medida para las dos fechas (Navidad y Año nuevo)
@@ -79,7 +108,7 @@ tabla.datos.promedio <- tabla.datos %>%
   group_by(fecha,condicion) %>%
   summarise(nivel_sonoro_mean = mean(nivel_sonoro),
             nivel_sonoro_sd = sd(nivel_sonoro))
-tabla.datos.promedioMAL
+#tabla.datos.promedioMAL
 
 fig = ggplot(tabla.datos, aes(x = condicion, y = nivel_sonoro, color = condicion))+
       geom_jitter(width = 0.1, alpha = 0.1)+
@@ -131,56 +160,7 @@ Debug
 
 ```{r eval=TRUE, echo=TRUE}
 
-# tabla.datos.promedio4 <- tabla.datos %>%
-#   group_by(fecha,condicion) %>%
-#   summarise(nivel_sonoro_mean = meandB(nivel_sonoro),
-#             nivel_sonoro_sd = sddB(nivel_sonoro))
-# 
-# tabla.datos.promedio3 <- tabla.datos %>%
-#   group_by(fecha,condicion) %>%
-#   summarise(nivel_sonoro_mean = 10*log10(sum(10^(nivel_sonoro/10))/n()),
-#             nivel_sonoro_sd = sd(10*log10(sum(10^(nivel_sonoro/10))/n())))
-# 
-# 
-# 
-# datos  %<>%  mutate(intervalo_min = case_when(
-#       tiempo <= 900 ~  15,
-#       tiempo <= 1800 ~ 30,
-#       tiempo <= 2700 ~ 45,
-#       tiempo <= 3600 ~ 60,
-#       tiempo <= 4500 ~ 75,
-#       tiempo <= 5400 ~ 90,
-#       tiempo <= 6300 ~ 105,
-#       tiempo <= 7200 ~ 120,
-#     ))
-# 
-# intervalo_spl <- datos %>%
-#   group_by(punto,fecha,intervalo_min,condicion) %>%
-#   summarise(nivel_sonoro_avg = 10*log10(sum(10^(nivel_sonoro/10))/n()))
-# 
-# figura_navidad_spl_avg = intervalo_spl %>%
-#   filter(fecha=='Navidad') %>%
-#   ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
-#   geom_line()+
-#   facet_wrap(punto~.)+
-#   labs(x = "Intervalos de 15 minutos",
-#        y = "SPL",
-#        title = "SPL promedio cada 15 minutos para Navidad") +
-#   theme_minimal()
-# 
-# figura_navidad_spl_avg
-# 
-# figura_anio_nuevo_spl_avg = intervalo_spl %>%
-#   filter(fecha!='Navidad') %>%
-#   ggplot( aes(x=intervalo_min,y=nivel_sonoro_avg)) +
-#   geom_line()+
-#   facet_wrap(punto~.)+
-#   labs(x = "Intervalos de 15 minutos",
-#        y = "SPL",
-#        title = "SPL promedio cada 15 minutos para Navidad") +
-#   theme_minimal()
-# 
-# figura_anio_nuevo_spl_avg   
+  
 
 ```
 

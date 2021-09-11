@@ -126,3 +126,48 @@ densidad
 
 ggplot() + geom_col(data = histograma, aes(x = mids, y=density), color='black', fill='white') + #width = 0.5,
   geom_line(data = densidad, aes(x = x, y = pdf), color = 'orange')
+
+install.packages('lme4')
+
+mapa.puntos = read.csv("../../puntos.csv", header = TRUE, sep = ',', stringsAsFactors = TRUE)
+
+
+install.packages('measurements')
+library(measurements)
+library(stringr)
+library(sp)
+install.packages('leaflet')
+library(leaflet)
+
+mapa.puntos %<>% mutate(lat = dms2dd(Latitud,NS=True))
+
+mapa.puntos %<>%mutate(lat= Ubicacion)
+
+mapa.puntos %<>% mutate(lat = as.character.DMS(Ubicacion))
+
+chd = substr(mapa.puntos$Ubicacion,3,3)[1]
+chm = substr(mapa.puntos$Ubicacion,6,6)[1]
+chs = substr(mapa.puntos$Ubicacion,9,9)[1]
+
+lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
+mapa.puntos$lat <- c(as.numeric(lat))
+
+lng =  char2dms(as.character(mapa.puntos$Longitud), chd="°",chm="\'",chs="\"")
+mapa.puntos$lng <- c(as.numeric(lng))
+
+mapa.puntos %<>% mutate(
+  lat = case_when(
+    lat < 0 ~ lat,
+    lat > 0 ~ lat * -1
+  )
+)
+
+dms2dd(mapa.puntos$Longitud, ns =True)
+mapa.puntos$Longitud(mapa.puntos$Posición == 1)
+
+map <- leaflet() %>%
+  addTiles() %>%
+  addMarkers(lng = mapa.puntos$lng, lat= mapa.puntos$lat,
+             popup = mapa.puntos$Barrio...Comuna)
+
+map
