@@ -1,0 +1,201 @@
+---
+title: "Analisis del ruido ambiental de la CABA durante navidad y año nuevo"
+author: "Joaquin Cerviño, Dario Ruiz y Esteban Lombera"
+date: "8/29/2021"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+    theme: united
+    highlight: pygments
+    toc: true
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggpubr)
+library(magrittr)
+library(purrr)
+library(dplyr)
+library(seewave)
+library(nlme)
+library(car)
+library(lme4)
+library(sp)
+library(leaflet)
+```
+
+## Introducción y descripción de datos
+<style>
+body {
+text-align: justify}
+</style>
+El presente trabajo pretende analizar como varia el nivel de ruido ambiental en la Ciudad Autónoma de Buenos Aires (CABA) durante las fechas festivas (específicamente navidad, y año nuevo). Para ello, se realizaron medidas experimentales de ruido en 7 puntos (*n = 7*) de la CABA según su normativa vigente *([link](https://www.argentina.gob.ar/normativa/provincial/ley-1540-123456789-0abc-defg-045-1000xvorpyel))*. Por otro lado, se cuenta con medidas control de ruido en 7 puntos (*n = 7*) de la CABA provistas por la Agencia de Protección Ambiental (APrA) del Gobierno de la ciudad. Estas medidas control fueron obtenidas durante días de semana en periodos de actividad normal. La APrA cuanta con más de 400 puntos de medida distribuidos por toda la ciudad, Los 7 puntos control fueron seleccionados con el criterio de mayor proximidad a los puntos experimentales.
+La figura 1 muestra la distribución de los puntos de medida. En rojo los puntos experimentales y en azul los puntos control. Al hacer click en cada punto se puede visualizar su detalle.
+<style>
+.html-widget {
+    margin: auto;
+}
+</style>
+```{r fig-margin0, fig.margin=TRUE, fig.dim = c(9, 4)}
+mapa.puntos = read.csv("./data/puntosEs.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
+mapa.puntos$lat <- c(as.numeric(lat))
+lng =  char2dms(as.character(mapa.puntos$Longitud), chd="°",chm="\'",chs="\"")
+mapa.puntos$lng <- c(as.numeric(lng))
+mapa.puntos %<>% mutate(
+  lat = case_when(
+    lat < 0 ~ lat,
+    lat > 0 ~ lat * -1
+  )
+)
+beatCol <- colorFactor(palette = c("blue","red"), mapa.puntos$Fecha)
+map <- leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = mapa.puntos, lat = ~lat, lng = ~lng,
+                   popup = mapa.puntos$Barrio...Comuna,
+                   color = ~beatCol(Fecha))%>%
+  addLegend("bottomright", pal = beatCol, values = mapa.puntos$Fecha,
+                           title = "Puntos de medida",
+                           opacity = .5)
+map
+
+```
+<br />
+<style>
+body {
+text-align: justify}
+</style>
+Cada sonómetro utilizado realizó mediciones de nivel de presión sonora en dBA cada 1 segundo a lo largo de 2 horas. Desde las 23:00hs hasta las 01:00hs. Las fechas de medición fueron iniciadas los días 24/12/2020 (Navidad) y 31/12/2020 (Año nuevo); y finalizadas los días 25/12/2020 y 1/1/2021 respectivamente. Los datos otorgados por la APrA corresponden a el Nivel Continuo Equivalente ponderado A medido entre las 23:00hs hasta las 01:00hs durante días no feriados de actividad normal (se descartan días durante vacaciones de invierno y verano).
+La tabla 1 muestra los datos obtenidos del nivel sonoro (dBA) por segundo para cada punto de medida en ambas fechas festivas. La tabla 2, presenta los datos provistos por la APrA del nivel continuo equivalente entre las 23:00 y las 01:00 para cada dia medido. 
+<br />
+Tabla 1
+```{r rows.print=6,message=FALSE, warning=FALSE}
+tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+tabla.datos %<>% mutate(fecha = case_when(
+  fecha != 'Navidad' ~ 'Año_nuevo',
+  fecha == 'Navidad' ~ 'Navidad',
+))
+tabla.datos
+```
+Tabla 2
+```{r rows.print=6,message=FALSE, warning=FALSE}
+tabla.datosAPRA = read.csv("./data/datosAPrA.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+tabla.datosAPRA
+```
+<br />
+<style>
+body {
+text-align: justify}
+</style>
+La figura 2 muestra gráficamente los niveles de presión sonora en dBA a lo largo de los 7200 segundo (1 datos por segundo durante 2 horas) por cada punto de medida para las dos fechas (Navidad y Año nuevo)
+```{r fig-margin2, fig.margin=TRUE, fig.dim = c(10, 6), fig.align="center"}
+figura1 = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
+          geom_point(alpha = 0.3)+
+          facet_grid(fecha~punto)+
+          theme_pubr(base_size = 12, margin = TRUE)+
+          scale_x_continuous(name= "Tiempo [seg]", breaks=c(0,3500,7000), labels=c("0","3k5","7k")) +
+          labs(y = "Nivel de presión [dBA]") +
+          theme(legend.position = "top",
+                legend.title = element_blank())
+figura1
+
+```
+
+## Hipótesis de trabajo
+
+Pretendemos analizar estos datos a fin de responder las siguientes hipótesis:
+
+H1: El nivel de ruido ambiental en la CABA es significativamente mayor durante los festejos de navidad y año nuevo
+
+H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es significativamente mayor que durante navidad
+
+## Manipulación de datos
+ - Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia" cuando el tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual a 3600. Usar mutate --- 
+
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+tabla.datos <- tabla.datos %>%
+  mutate(condicion = case_when(
+    tiempo <= 3600 ~ 'sin_pirotecnia',
+    tiempo > 3600 ~ 'con_pirotecnia',
+  ))
+
+tabla.datos.promedio <- tabla.datos %>%
+  group_by(fecha,condicion) %>%
+  summarise(nivel_sonoro_mean = mean(nivel_sonoro),
+            nivel_sonoro_sd = sd(nivel_sonoro))
+#tabla.datos.promedioMAL
+
+fig = ggplot(tabla.datos, aes(x = condicion, y = nivel_sonoro, color = condicion))+
+      geom_jitter(width = 0.1, alpha = 0.1)+
+      # geom_boxplot()+
+      facet_grid(fecha~.)+
+      theme_pubr(base_size = 12, margin = TRUE)+
+      labs(y = "Nivel de presión [dBA]", x = "Condicion") +
+      theme(legend.position = "top",
+            legend.title = element_blank())
+fig
+
+```
+
+
+## Análisis estadistico
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+modelo1 = lm(nivel_sonoro ~ fecha*condicion + punto,
+             data = tabla.datos)
+
+# nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
+summary(modelo1)
+Anova(modelo1)
+```
+
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+modelo1 = lmer(nivel_sonoro ~ fecha*condicion + (1|punto),
+             data = tabla.datos)
+
+# nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
+summary(modelo1)
+Anova(modelo1)
+```
+
+
+## Resultados
+
+## Conclusión
+
+Debug
+
+```{r eval=TRUE, echo=TRUE}
+# mapa.puntos = read.csv("./data/puntosE.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+# lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
+# mapa.puntos$lat <- c(as.numeric(lat))
+# lng =  char2dms(as.character(mapa.puntos$Longitud), chd="°",chm="\'",chs="\"")
+# mapa.puntos$lng <- c(as.numeric(lng))
+# mapa.puntos$lat <- jitter(mapa.puntos$lat, factor = 1)
+# mapa.puntos$lng <- jitter(mapa.puntos$lng, factor = 1)
+# mapa.puntos %<>% mutate(
+#   lat = case_when(
+#     lat < 0 ~ lat,
+#     lat > 0 ~ lat * -1
+#   )
+# )
+# beatCol <- colorFactor(palette = c("red","blue","green"), mapa.puntos$Fecha)
+# map <- leaflet() %>%
+#   addTiles() %>%
+#   addCircleMarkers(data = mapa.puntos, lat = ~lat, lng = ~lng,
+#                    popup = mapa.puntos$Barrio...Comuna,
+#                    color = ~beatCol(Fecha))%>%
+#  addLegend("bottomright", pal = beatCol, values = mapa.puntos$Fecha,
+#             title = "Puntos de medida",
+#             opacity = .5)
+#   # addMarkers(lng = mapa.puntos$lng, lat= mapa.puntos$lat,
+#   #            popup = mapa.puntos$Barrio...Comuna,
+#   #            color_palette("Dark"))
+# map
+
+  
+
+```
+
