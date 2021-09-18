@@ -34,6 +34,8 @@ tabla.datos %<>%
 
 tabla.datos.lm <- lm(nivel_sonoro ~ punto, data = tabla.datos)
 
+# R cuadrado
+summary(tabla.datos.lm)$r.squared
 
 beta  = tabla.datos.lm$coefficients["(Intercept)"]
 summary( tabla.datos.lm)
@@ -53,6 +55,7 @@ p3
 pirotecnia.lme <- lme(nivel_sonoro ~ fecha*condicion, data = tabla.datos, random = ~ 1|punto)
 
 summary(pirotecnia.lme)
+
 
 residuo_datos2 <- tabla.datos %>% mutate(res = resid(pirotecnia.lme )) %>% tibble()
 p3 = ggplot(residuo_datos2, aes(x = res, y = tabla.datos$punto)) + geom_boxplot()
@@ -78,3 +81,21 @@ figura2 = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
   geom_line(data=data_m1.lm, aes(x=tiempo, y=pred, group=punto), color='white')
 
 figura2
+
+
+# prueba de ver un punto
+tabla.datos.p1 <- tabla.datos %>% filter(punto == 'P1')
+data_m1.lm.p1 <- data_m1.lm %>% filter(punto == "P1")
+
+figura_x = ggplot(tabla.datos.p1, aes(x=tiempo, y=nivel_sonoro))+
+  geom_point(alpha = 0.3)+
+  facet_grid(fecha~punto)+
+  theme_pubr(base_size = 12, margin = TRUE)+
+  scale_x_continuous(name= "Tiempo [seg]", breaks=c(0,3500,7000), labels=c("0","3k5","7k")) +
+  labs(y = "Nivel de presión [dBA]") +
+  theme(legend.position = "top",
+        legend.title = element_blank())+
+  geom_line(data=data_m1.lm.p1, aes(x=tiempo, y=pred, group=punto), color='white')
+
+figura_x
+
