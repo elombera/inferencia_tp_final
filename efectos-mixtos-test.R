@@ -46,13 +46,13 @@ p2 = ggplot(residuo_datos, aes(x = res, y = tabla.datos$punto)) + geom_boxplot()
 p2
 
 
-Rail_datos %<>% mutate(res2 = resid(fm2Rail.lm))
-p3 = ggplot(Rail_datos, aes(x = res2, y = Rail)) + geom_boxplot()
-p3
+#Rail_datos %<>% mutate(res2 = resid(fm2Rail.lm))
+#p3 = ggplot(Rail_datos, aes(x = res2, y = Rail)) + geom_boxplot()
+#p3
 
 
 
-pirotecnia.lme <- lme(nivel_sonoro ~ fecha*condicion, data = tabla.datos, random = ~ 1|punto)
+pirotecnia.lme <- lme(nivel_sonoro ~ fecha*condicion*tiempo, data = tabla.datos, random = ~ 1|punto)
 
 summary(pirotecnia.lme)
 
