@@ -1,5 +1,5 @@
 ---
-title: "Prueba de creacion de modelo de efectos mixtos"
+title: "Análisis de datos"
 author: "Joaquin Cerviño, Dario Ruiz y Esteban Lombera"
 date: "09/23/2021"
 output:
@@ -23,14 +23,15 @@ library(nlme)
 library(car)
 ```
 
-## Prueba de modelo de efectos mixtos
+## Análisis mediante modelo de efectos mixtos
 <style>
 body {
 text-align: justify}
 </style>
-Esta es una prueba de creación de un modelo de efectos mixtos
-Voy a considerar fecha condicion y tiempo como efectos fijos y punto como 
-efecto aleatorio.
+Para analizar los datos de NPL durante navidad y año nuevo, se consideró necesaria la adopción de un modelo de efectos mixtos.
+Las medidas de nivel de presión sonoro del ruido ambiente fueron tomadas en locaciones geográficas específicas repetidas para las dos fechas. Consecuentemente, se considera a éstas como unidades de análisis, y por lo tanto factores aleatorios.
+Por otro lado, las fechas(Navidad y año nuevo) y la condición (con o sin pirotecnia, es decir, antes o después de las 00:00 horas) son consideradas como efectos fijos.
+El tiempo se consideró como la variable independiente a partir de la cual generar la regresión lineal.
 <style>
 .html-widget {
     margin: auto;
@@ -61,7 +62,10 @@ summary(pirotecnia.lme)
 body {
 text-align: justify}
 </style>
-El anova
+## Anova del modelo
+Al realizar un Anova del modelo se puede observar que existen diferencias significativas para fecha y condición. Por lo tanto, se puede inferir que existen diferencias significativas entre el nivel de ruido ambiente durante navidad y año nuevo. También, se hace notoria la diferencia significativa existente para las condiciones con y sin pirotecnia, esto es, antes y después de las 00:00 horas.
+
+Por otro lado, es observable una interacción entre fecha y condición. Consecuentemente, se puede afirmar que la difrencia de nivel de ruido ambiente para las dos condiciones, con y sin pirotecnia, es significativamente diferente durante navidad y año nuevo.
 <br />
 ```{r echo=TRUE,fig-margin2}
 Anova(pirotecnia.lme)
@@ -72,7 +76,8 @@ Anova(pirotecnia.lme)
 body {
 text-align: justify}
 </style>
-Y los residuos
+## Residuos
+A continuación se grafican los residuos que genera nuestro modelo para cada uno de los efectos aleatorios, estos son, los distintos puntos donde se tomaron las medidas de presión sonora, considerados unidad de análisis.
 <br />
 ```{r fig-margin3, fig.margin=TRUE, fig.dim = c(9, 4)}
 residuo_datos2 <- tabla.datos %>% mutate(res = resid(pirotecnia.lme )) %>% tibble()
@@ -86,7 +91,7 @@ p3
 body {
 text-align: justify}
 </style>
-El modelo junto con los datos
+Para ilustrar el modelo obtenido, se procede a diagramarlo junto con las medidas tomadas de presión sonora.
 <br />
 ```{r fig-margin4, fig.margin=TRUE, fig.dim = c(9, 4)}
 
