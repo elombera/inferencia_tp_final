@@ -140,11 +140,14 @@ tabla.datos.promedio <- tabla.datos %>%
             nivel_sonoro_sd = sddB(nivel_sonoro))
 idx = merge(x = tabla.datosAPRA.promedio, y =  tabla.datosAPRA.promedio2, all = TRUE)
 tabla.h1 = merge(x = tabla.datos.promedio, y =  idx, all = TRUE)
+```
 
+## Resultados
+
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
 fig = ggplot(tabla.datos.promedio, aes(x = condicion, y = nivel_sonoro_mean, color = condicion))+
       geom_jitter(width = 0.1, alpha = 1)+
       # geom_boxplot()+
-  geom_jitter(tabla.datosAPRA.promedio, aes(y = nivel_sonoro_mean))+
     stat_summary(fun.data = "mean_se",
                geom = "bar",
                alpha = .1,
@@ -178,33 +181,100 @@ fig2 = ggplot(tabla.h1, aes(x = condicion, y = nivel_sonoro_mean, color = condic
       theme(legend.position = "top",
             legend.title = element_blank())
 fig2
-
 ```
 
 
-## Análisis estadistico
-```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
-modelo1 = lm(nivel_sonoro ~ fecha*condicion + punto,
-             data = tabla.datos)
+### Análisis mediante modelo de efectos mixtos
+<style>
+body {
+text-align: justify}
+</style>
+Para analizar los datos de SPL durante navidad y año nuevo, se consideró necesaria la adopción de un modelo de efectos mixtos.
+Las medidas de nivel de presión sonoro del ruido ambiente fueron tomadas en locaciones geográficas específicas repetidas para las dos fechas. Consecuentemente, se considera a éstas como unidades de análisis, y por lo tanto factores aleatorios.
+Por otro lado, las fechas(Navidad y año nuevo) y la condición (con o sin pirotecnia, es decir, antes o después de las 00:00 horas) son consideradas como efectos fijos.
+El tiempo se consideró como la variable independiente a partir de la cual generar la regresión lineal.
+<style>
+.html-widget {
+    margin: auto;
+}
+</style>
+```{r fig-margin111, fig.margin=TRUE, fig.dim = c(9, 4)}
+tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
-# nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
-summary(modelo1)
-Anova(modelo1)
+# tengo un problema de encoding con la ñ de columna Año Nuevo
+tabla.datos %<>% mutate(fecha = case_when(
+  fecha != 'Navidad' ~ 'Anio_nuevo',
+  fecha == 'Navidad' ~ 'Navidad',
+))
+
+tabla.datos %<>%
+  mutate(condicion = case_when(
+    tiempo <= 3600 ~ 'sin_pirotecnia',
+    tiempo > 3600 ~ 'con_pirotecnia',
+  ))
+
+pirotecnia.lme <- lme(nivel_sonoro ~ fecha*condicion*tiempo, data = tabla.datos, random = ~ 1|punto)
+
+summary(pirotecnia.lme)
+
+```
+<br />
+<style>
+body {
+text-align: justify}
+</style>
+### Anova del modelo
+Al realizar un Anova del modelo se puede observar que existen diferencias significativas para fecha y condición. Por lo tanto, se puede inferir que existen diferencias significativas entre el nivel de ruido ambiente durante navidad y año nuevo. También, se hace notoria la diferencia significativa existente para las condiciones con y sin pirotecnia, esto es, antes y después de las 00:00 horas.
+
+Por otro lado, es observable una interacción entre fecha y condición. Consecuentemente, se puede afirmar que la difrencia de nivel de ruido ambiente para las dos condiciones, con y sin pirotecnia, es significativamente diferente durante navidad y año nuevo.
+<br />
+```{r echo=TRUE,fig-margin222}
+Anova(pirotecnia.lme)
+
+```
+<br />
+<style>
+body {
+text-align: justify}
+</style>
+### Residuos
+A continuación se grafican los residuos que genera nuestro modelo para cada uno de los efectos aleatorios, estos son, los distintos puntos donde se tomaron las medidas de presión sonora, considerados unidad de análisis.
+<br />
+```{r fig-margin3333, fig.margin=TRUE, fig.dim = c(9, 4)}
+residuo_datos2 <- tabla.datos %>% mutate(res = resid(pirotecnia.lme )) %>% tibble()
+p3 = ggplot(residuo_datos2, aes(x = res, y = tabla.datos$punto)) + geom_boxplot()
+p3
+
 ```
 
-```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
-modelo1 = lmer(nivel_sonoro ~ fecha*condicion + (1|punto),
-             data = tabla.datos)
+<br />
+<style>
+body {
+text-align: justify}
+</style>
+Para ilustrar el modelo obtenido, se procede a diagramarlo junto con las medidas tomadas de presión sonora.
+<br />
+```{r fig-margin4444, fig.margin=TRUE, fig.dim = c(9, 4)}
 
-# nivel_sonoro = 55.15567 + 0.99329 "Navidad" -7.45520 "Sin pirotecnia" + 2.60660 "Navidad*Sin_pirotecnia
-summary(modelo1)
-Anova(modelo1)
+data_m1.lm <- tabla.datos %>% mutate(pred = predict(pirotecnia.lme), res = resid(pirotecnia.lme))
+
+figura2 = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
+  geom_point(alpha = 0.3)+
+  facet_grid(fecha~punto)+
+  theme_pubr(base_size = 12, margin = TRUE)+
+  scale_x_continuous(name= "Tiempo [seg]", breaks=c(0,3500,7000), labels=c("0","3k5","7k")) +
+  labs(y = "Nivel de presión [dBA]") +
+  theme(legend.position = "top",
+        legend.title = element_blank())+
+  geom_line(data=data_m1.lm, aes(x=tiempo, y=pred, group=punto), color='white')
+
+figura2
 ```
 
+### Prueba T
 
-## Resultados
 
-## Conclusión
+## Discusion - Conclusion
 
 Debug
 
