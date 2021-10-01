@@ -25,21 +25,20 @@ library(car)
 library(lme4)
 library(sp)
 library(leaflet)
+library(htmltools)
 ```
 
+<style>
+  body {
+    text-align: justify
+  }
+</style>
+
 ## Introducción y descripción de datos
-<style>
-body {
-text-align: justify}
-</style>
-El presente trabajo pretende analizar como varia el nivel de ruido ambiental en la Ciudad Autónoma de Buenos Aires (CABA) durante las fechas festivas (específicamente navidad, y año nuevo). Para ello, se realizaron medidas experimentales de ruido en 7 puntos (*n = 7*) de la CABA según su normativa vigente *([link](https://www.argentina.gob.ar/normativa/provincial/ley-1540-123456789-0abc-defg-045-1000xvorpyel))*. Por otro lado, se cuenta con medidas control de ruido en 7 puntos (*n = 7*) de la CABA provistas por la Agencia de Protección Ambiental (APrA) del Gobierno de la ciudad. Estas medidas control fueron obtenidas durante días de semana en periodos de actividad normal. La APrA cuanta con más de 400 puntos de medida distribuidos por toda la ciudad, Los 7 puntos control fueron seleccionados con el criterio de mayor proximidad a los puntos experimentales.
+El presente trabajo pretende analizar como varia el nivel de ruido ambiental en la Ciudad Autónoma de Buenos Aires (CABA) durante las fechas festivas (específicamente navidad, y año nuevo). Para ello, se realizaron medidas experimentales de ruido en ambos dias festivos en 7 puntos (*n = 7*) de la CABA según su normativa vigente *([link](https://www.argentina.gob.ar/normativa/provincial/ley-1540-123456789-0abc-defg-045-1000xvorpyel))*. Por otro lado, se cuenta con medidas control de ruido en 7 puntos (*n = 7*) de la CABA provistas por la Agencia de Protección Ambiental (APrA) del Gobierno de la ciudad. Estas medidas control fueron obtenidas durante días de semana en periodos de actividad normal. La APrA cuanta con más de 400 puntos de medida distribuidos por toda la ciudad, Los 7 puntos control fueron seleccionados con el criterio de mayor proximidad a los puntos experimentales.
 La figura 1 muestra la distribución de los puntos de medida. En rojo los puntos experimentales y en azul los puntos control. Al hacer click en cada punto se puede visualizar su detalle.
-<style>
-.html-widget {
-    margin: auto;
-}
-</style>
-```{r fig-margin0, fig.margin=TRUE, fig.dim = c(9, 4)}
+
+```{r fig-margin0, fig.margin=TRUE, fig.dim = c(9, 4), fig.align='center'}
 mapa.puntos = read.csv("./data/puntosEs.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
 mapa.puntos$lat <- c(as.numeric(lat))
@@ -52,14 +51,15 @@ mapa.puntos %<>% mutate(
   )
 )
 beatCol <- colorFactor(palette = c("blue","red"), mapa.puntos$Fecha)
+labelPunto <- paste(sep=" ",'Punto', mapa.puntos$Posicion , mapa.puntos$Barrio...Comuna)
 map <- leaflet() %>%
   addTiles() %>%
   addCircleMarkers(data = mapa.puntos, lat = ~lat, lng = ~lng,
-                   popup = mapa.puntos$Barrio...Comuna,
-                   color = ~beatCol(Fecha))%>%
+                   color = ~beatCol(Fecha),
+                   label = labelPunto)%>%
   addLegend("bottomright", pal = beatCol, values = mapa.puntos$Fecha,
-                           title = "Puntos de medida",
-                           opacity = .5)
+            title = "Puntos de medida",
+            opacity = .5)
 map
 
 ```
