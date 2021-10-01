@@ -113,7 +113,10 @@ H1: El nivel de ruido ambiental en la CABA es significativamente mayor durante l
 H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es significativamente mayor que durante navidad
 
 ## Manipulación de datos
- - Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia" cuando el tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual a 3600. Usar mutate --- 
+Con el fin de diferenciar el nivel de ruido ambiental cuando hay pirotecnia y cuando no, se agrega una columna “condición” donde se describe aquellos puntos “sin pirotecnia” entre las 23:00 hs hasta las 00:00 hs y aquellos puntos “con pirotecnia” entre las 00:00 hs hasta las 01:00 hs.
+Para la tabla 2 (puntos provistos por la APrA), se calcula una media y un sd para cada punto.
+
+
 
 ```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
 tabla.datos <- tabla.datos %>%
@@ -122,21 +125,59 @@ tabla.datos <- tabla.datos %>%
     tiempo > 3600 ~ 'con_pirotecnia',
   ))
 
-tabla.datos.promedio <- tabla.datos %>%
-  group_by(fecha,condicion) %>%
-  summarise(nivel_sonoro_mean = mean(nivel_sonoro),
-            nivel_sonoro_sd = sd(nivel_sonoro))
-#tabla.datos.promedioMAL
+tabla.datosAPRA.promedio <- tabla.datosAPRA %>%
+  group_by(punto) %>%
+  summarise(nivel_sonoro_mean = mean(LeqA),
+            nivel_sonoro_sd = sd(LeqA))
+tabla.datosAPRA.promedio$condicion = "Control"
+tabla.datosAPRA.promedio$fecha = "Navidad"
+tabla.datosAPRA.promedio2 = tabla.datosAPRA.promedio
+tabla.datosAPRA.promedio2$fecha = "Año_nuevo"
 
-fig = ggplot(tabla.datos, aes(x = condicion, y = nivel_sonoro, color = condicion))+
-      geom_jitter(width = 0.1, alpha = 0.1)+
+tabla.datos.promedio <- tabla.datos %>%
+  group_by(fecha,condicion,punto) %>%
+  summarise(nivel_sonoro_mean = meandB(nivel_sonoro),
+            nivel_sonoro_sd = sddB(nivel_sonoro))
+idx = merge(x = tabla.datosAPRA.promedio, y =  tabla.datosAPRA.promedio2, all = TRUE)
+tabla.h1 = merge(x = tabla.datos.promedio, y =  idx, all = TRUE)
+
+fig = ggplot(tabla.datos.promedio, aes(x = condicion, y = nivel_sonoro_mean, color = condicion))+
+      geom_jitter(width = 0.1, alpha = 1)+
       # geom_boxplot()+
+  geom_jitter(tabla.datosAPRA.promedio, aes(y = nivel_sonoro_mean))+
+    stat_summary(fun.data = "mean_se",
+               geom = "bar",
+               alpha = .1,
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = "mean_se",
+               geom = "linerange",
+               size=2,
+               position = position_dodge(width = 1)) +
       facet_grid(fecha~.)+
       theme_pubr(base_size = 12, margin = TRUE)+
       labs(y = "Nivel de presión [dBA]", x = "Condicion") +
       theme(legend.position = "top",
             legend.title = element_blank())
 fig
+
+
+fig2 = ggplot(tabla.h1, aes(x = condicion, y = nivel_sonoro_mean, color = condicion))+
+      geom_jitter(width = 0.1, alpha = 1)+
+      # geom_boxplot()+
+    stat_summary(fun.data = "mean_se",
+               geom = "bar",
+               alpha = .1,
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = "mean_se",
+               geom = "linerange",
+               size=2,
+               position = position_dodge(width = 1)) +
+      facet_grid(fecha~.)+
+      theme_pubr(base_size = 12, margin = TRUE)+
+      labs(y = "Nivel de presión [dBA]", x = "Condicion") +
+      theme(legend.position = "top",
+            legend.title = element_blank())
+fig2
 
 ```
 
