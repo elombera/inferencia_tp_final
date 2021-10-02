@@ -114,10 +114,10 @@ H2: El nivel de ruido ambiental en la CABA durante los festejos de año nuevo es
 
 ## Manipulación de datos
 Con el fin de diferenciar el nivel de ruido ambiental cuando hay pirotecnia y cuando no, se agrega una columna “condición” donde se describe aquellos puntos “sin pirotecnia” entre las 23:00 hs hasta las 00:00 hs y aquellos puntos “con pirotecnia” entre las 00:00 hs hasta las 01:00 hs.
+Para analizar la diferencia de nivel de ruido ambiental durante el periodo temporal donde más pirotecnia se tira durante los años festivos (00:00 a 00:15 hs según estado del arte), se agrega una columna "intervalo_min" donde aquellos primeros 15 minutos (3600 y 4500) se asigna como "15min".
+
 Para la tabla 2 (puntos provistos por la APrA), se calcula una media y un sd para cada punto.
-
-
-
+Todas las medias y desvíos fueron realizados con la librería seewave. Esta provee dos funciones para calcular mean y sd con valores en dBA
 ```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
 tabla.datos <- tabla.datos %>%
   mutate(condicion = case_when(
@@ -125,64 +125,159 @@ tabla.datos <- tabla.datos %>%
     tiempo > 3600 ~ 'con_pirotecnia',
   ))
 
+
+tabla.datos  %<>%  mutate(intervalo_min = case_when(
+      tiempo <= 900 ~  "NA",
+      tiempo <= 3600 ~ "NA",
+      tiempo <= 4500 ~ "15min",
+      tiempo > 4500 ~ "NA"
+    ))
+
 tabla.datosAPRA.promedio <- tabla.datosAPRA %>%
-  group_by(punto) %>%
+  group_by(Punto) %>%
   summarise(nivel_sonoro_mean = mean(LeqA),
             nivel_sonoro_sd = sd(LeqA))
 tabla.datosAPRA.promedio$condicion = "Control"
 tabla.datosAPRA.promedio$fecha = "Navidad"
 tabla.datosAPRA.promedio2 = tabla.datosAPRA.promedio
 tabla.datosAPRA.promedio2$fecha = "Año_nuevo"
+idx = merge(x = tabla.datosAPRA.promedio, y =  tabla.datosAPRA.promedio2, all = TRUE)
 
-tabla.datos.promedio <- tabla.datos %>%
+tabla.datos.promedio.60m <- tabla.datos %>%
   group_by(fecha,condicion,punto) %>%
   summarise(nivel_sonoro_mean = meandB(nivel_sonoro),
-            nivel_sonoro_sd = sddB(nivel_sonoro))
-idx = merge(x = tabla.datosAPRA.promedio, y =  tabla.datosAPRA.promedio2, all = TRUE)
-tabla.h1 = merge(x = tabla.datos.promedio, y =  idx, all = TRUE)
+            nivel_sonoro_sd = sd(nivel_sonoro))
+tabla.datos.promedio.60m$intervalo_min = "60min"
+
+tabla.datos.promedio.15m <- tabla.datos %>% filter(intervalo_min == "15min")%>%
+  group_by(fecha,condicion,punto) %>%
+  summarise(nivel_sonoro_mean = meandB(nivel_sonoro),
+            nivel_sonoro_sd = sd(nivel_sonoro))
+tabla.datos.promedio.15m$intervalo_min = "15min"
+
+tabla.general = merge(x = tabla.datos.promedio.15m, y =  tabla.datos.promedio.60m, all = TRUE)
+tabla.general = merge(x = tabla.general, y =  idx, all = TRUE)
+
+
+tabla.general.promedio = tabla.general %>%
+    group_by(fecha,condicion,intervalo_min) %>%
+  summarise(nivel_sonoro_mean_final = meandB(nivel_sonoro_mean),
+            nivel_sonoro_sd_final = sd(nivel_sonoro_mean))
+
 ```
 
 ## Resultados
+En la figura 1 muestra la media (+/- sd) de cada punto de medida durante los primeros 60 minutos "sin_pirotecnia" (23:00 a 00:00 hs) y durante los 60 minutos con pirotecnia  "con_pirotecnia" (00:01 a 01:00 hs) para cada fecha festiva. En el medio (color verde) se encuentra los resultados de las medidas de control. Con *** (p<0.005) se presentan los resultados de los t-test.
+La fuigura 2 muestra los mismos datos pero tomando solo el periodo temporal de los primeros 15 minutos "con_pirotecnia" y "control".
 
 ```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
-fig = ggplot(tabla.datos.promedio, aes(x = condicion, y = nivel_sonoro_mean, color = condicion))+
-      geom_jitter(width = 0.1, alpha = 1)+
-      # geom_boxplot()+
-    stat_summary(fun.data = "mean_se",
-               geom = "bar",
-               alpha = .1,
-               position = position_dodge(width = 1)) +
-  stat_summary(fun.data = "mean_se",
-               geom = "linerange",
-               size=2,
-               position = position_dodge(width = 1)) +
-      facet_grid(fecha~.)+
+idx = tabla.general.promedio$condicion == "Control"
+tabla.general.promedio[idx,]$intervalo_min = "control"
+idx = tabla.general$condicion == "Control"
+tabla.general[idx,]$intervalo_min = "control"
+
+fig1 = ggplot(filter(tabla.general.promedio, intervalo_min != "15min"), aes(x = condicion, y = nivel_sonoro_mean_final, color = condicion))+
+       geom_point(size = 2)+
+       geom_errorbar(mapping=aes(ymin = nivel_sonoro_mean_final-nivel_sonoro_sd_final, 
+                                 ymax = nivel_sonoro_mean_final+nivel_sonoro_sd_final), 
+                     width=0.1) + 
+       geom_jitter(data = filter(tabla.general, intervalo_min != "15min"), aes(x = condicion, y = nivel_sonoro_mean, color = condicion), size = .7, width = 0.1, alpha = 1)+
+        facet_grid(fecha~.)+
+      theme_pubr(base_size = 12, margin = TRUE)+
+      labs(y = "Nivel de presión [dBA]", x = "Condicion") +
+        annotate("text", x = 2.5, y = 76.5,  label = "***", size = 7) +
+      annotate("segment", x = 2, xend = 3, y = 75, yend = 75, colour = "black", size=.8, alpha=1,)
+      theme(legend.position = "top",
+            legend.title = element_blank())
+
+fig2 = ggplot(filter(tabla.general.promedio, intervalo_min != "60min"), aes(x = condicion, y = nivel_sonoro_mean_final, color = condicion))+
+       geom_point(size = 2)+
+       geom_errorbar(mapping=aes(ymin = nivel_sonoro_mean_final-nivel_sonoro_sd_final, 
+                                 ymax = nivel_sonoro_mean_final+nivel_sonoro_sd_final), 
+                     width=0.1) + 
+       geom_jitter(data = filter(tabla.general, intervalo_min != "60min"), aes(x = condicion, y = nivel_sonoro_mean, color = condicion), size = .7, width = 0.1, alpha = 1)+
+        facet_grid(fecha~.)+
       theme_pubr(base_size = 12, margin = TRUE)+
       labs(y = "Nivel de presión [dBA]", x = "Condicion") +
       theme(legend.position = "top",
             legend.title = element_blank())
-fig
 
 
-fig2 = ggplot(tabla.h1, aes(x = condicion, y = nivel_sonoro_mean, color = condicion))+
-      geom_jitter(width = 0.1, alpha = 1)+
-      # geom_boxplot()+
-    stat_summary(fun.data = "mean_se",
-               geom = "bar",
-               alpha = .1,
-               position = position_dodge(width = 1)) +
-  stat_summary(fun.data = "mean_se",
-               geom = "linerange",
-               size=2,
-               position = position_dodge(width = 1)) +
-      facet_grid(fecha~.)+
-      theme_pubr(base_size = 12, margin = TRUE)+
-      labs(y = "Nivel de presión [dBA]", x = "Condicion") +
-      theme(legend.position = "top",
-            legend.title = element_blank())
+fig1
 fig2
 ```
+### Prueba T
 
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+#Analisis de normalidad
+tabla.general.promedio$W = 1
+tabla.general.promedio$p = 1
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Año_nuevo", condicion == "con_pirotecnia", intervalo_min == "60min")$nivel_sonoro_mean)
+idx = tabla.general.promedio$fecha == "Año_nuevo" & tabla.general.promedio$condicion == "con_pirotecnia" & tabla.general.promedio$intervalo_min == "60min"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value
+
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Año_nuevo", condicion == "con_pirotecnia",intervalo_min == "15min")$nivel_sonoro_mean)
+
+idx = tabla.general.promedio$fecha == "Año_nuevo" & tabla.general.promedio$condicion == "con_pirotecnia" & tabla.general.promedio$intervalo_min == "15min"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value 
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Navidad", condicion == "con_pirotecnia",intervalo_min == "60min")$nivel_sonoro_mean)
+
+idx = tabla.general.promedio$fecha == "Navidad" & tabla.general.promedio$condicion == "con_pirotecnia" & tabla.general.promedio$intervalo_min == "60min"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value 
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Navidad", condicion == "con_pirotecnia",intervalo_min == "15min")$nivel_sonoro_mean)
+
+idx = tabla.general.promedio$fecha == "Navidad" & tabla.general.promedio$condicion == "con_pirotecnia" & tabla.general.promedio$intervalo_min == "15min"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value 
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Año_nuevo", condicion == "sin_pirotecnia",intervalo_min == "60min")$nivel_sonoro_mean)
+
+idx = tabla.general.promedio$fecha == "Año_nuevo" & tabla.general.promedio$condicion == "sin_pirotecnia" & tabla.general.promedio$intervalo_min == "60min"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value  
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Navidad", condicion == "sin_pirotecnia",intervalo_min == "60min")$nivel_sonoro_mean)
+
+idx = tabla.general.promedio$fecha == "Navidad" & tabla.general.promedio$condicion == "sin_pirotecnia" & tabla.general.promedio$intervalo_min == "60min"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value  
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Navidad", condicion == "Control")$nivel_sonoro_mean)
+idx = tabla.general.promedio$fecha == "Navidad" & tabla.general.promedio$condicion == "Control"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value 
+
+shapiro_1 =shapiro.test(filter(tabla.general, fecha == "Año_nuevo", condicion == "Control")$nivel_sonoro_mean)
+idx = tabla.general.promedio$fecha == "Año_nuevo" & tabla.general.promedio$condicion == "Control"
+tabla.general.promedio[idx,]$W = shapiro_1$statistic
+tabla.general.promedio[idx,]$p = shapiro_1$p.value
+
+tabla.general.promedio
+
+# Año nuevo
+t.test(tabla.datosAPRA.promedio$nivel_sonoro_mean,
+       filter(tabla.general, fecha == "Año_nuevo", condicion == "con_pirotecnia", intervalo_min == "60min")$nivel_sonoro_mean,        paired = FALSE)
+t.test(tabla.datosAPRA.promedio$nivel_sonoro_mean,
+       filter(tabla.general, fecha == "Año_nuevo", condicion == "con_pirotecnia", intervalo_min == "15min")$nivel_sonoro_mean,        paired = FALSE)
+t.test(tabla.datosAPRA.promedio$nivel_sonoro_mean,
+       filter(tabla.general, fecha == "Año_nuevo", condicion == "sin_pirotecnia", intervalo_min == "60min")$nivel_sonoro_mean,        paired = FALSE)
+
+# Navidad
+t.test(tabla.datosAPRA.promedio$nivel_sonoro_mean,
+       filter(tabla.general, fecha == "Navidad", condicion == "con_pirotecnia", intervalo_min == "60min")$nivel_sonoro_mean,        paired = FALSE)
+t.test(tabla.datosAPRA.promedio$nivel_sonoro_mean,
+       filter(tabla.general, fecha == "Navidad", condicion == "con_pirotecnia", intervalo_min == "15min")$nivel_sonoro_mean,        paired = FALSE)
+t.test(tabla.datosAPRA.promedio$nivel_sonoro_mean,
+       filter(tabla.general, fecha == "Navidad", condicion == "sin_pirotecnia", intervalo_min == "60min")$nivel_sonoro_mean,        paired = FALSE)
+
+```
 
 ### Análisis mediante modelo de efectos mixtos
 <style>
@@ -271,42 +366,8 @@ figura2 = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
 figura2
 ```
 
-### Prueba T
-
 
 ## Discusion - Conclusion
-
-Debug
-
-```{r eval=TRUE, echo=TRUE}
-# mapa.puntos = read.csv("./data/puntosE.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
-# lat = char2dms(as.character(mapa.puntos$Latitud), chd="°",chm="\'",chs="\"")
-# mapa.puntos$lat <- c(as.numeric(lat))
-# lng =  char2dms(as.character(mapa.puntos$Longitud), chd="°",chm="\'",chs="\"")
-# mapa.puntos$lng <- c(as.numeric(lng))
-# mapa.puntos$lat <- jitter(mapa.puntos$lat, factor = 1)
-# mapa.puntos$lng <- jitter(mapa.puntos$lng, factor = 1)
-# mapa.puntos %<>% mutate(
-#   lat = case_when(
-#     lat < 0 ~ lat,
-#     lat > 0 ~ lat * -1
-#   )
-# )
-# beatCol <- colorFactor(palette = c("red","blue","green"), mapa.puntos$Fecha)
-# map <- leaflet() %>%
-#   addTiles() %>%
-#   addCircleMarkers(data = mapa.puntos, lat = ~lat, lng = ~lng,
-#                    popup = mapa.puntos$Barrio...Comuna,
-#                    color = ~beatCol(Fecha))%>%
-#  addLegend("bottomright", pal = beatCol, values = mapa.puntos$Fecha,
-#             title = "Puntos de medida",
-#             opacity = .5)
-#   # addMarkers(lng = mapa.puntos$lng, lat= mapa.puntos$lat,
-#   #            popup = mapa.puntos$Barrio...Comuna,
-#   #            color_palette("Dark"))
-# map
-
-  
-
-```
+Nuestros datos sugieren que, durante las fechas festivas en la CABA, el nivel de ruido ambiental no es significativamente mayor respecto a un día convencional en la misma franja horaria (00:00 a 01:00 hs). Esto se refleja cuando realizamos una prueba de t entre los datos provisto por el APrA y los medidos por nosotros. Esto se sostiene cuando analizamos en una franja horaria menos conservadora (00:00 a 00:15 hs). Donde tampoco fue significativa la diferencia. Sin embargo, las diferencias que se pueden observar para esta franja es ~ 6 dBA respecto a un día convencional. Es probable que al tener un desvío tan grande estas diferencias no se observen en la prueba de T. El desvío en las medidas experimentales puede reflejar que en ciertas zonas la pirotecnia es casi nula y en otras no. Sería interesante hacer un mismo análisis incluyendo como factor las comunas de CABA, y asociando a las mismas según su clase socioeconómica. Capaz que, en los barrios con mayor economía, la pirotecnia es mayor.
+Por otro lado, encontramos diferencias entre los niveles de ruido ambiental en la franja de (23:00 a 00:00) de los días festivos vs los días convencionales. Esta diferencia puede deberse a que en ese momento no circula ningún vehículo por las calles (dado que todos están festejando en sus casas) y se considera que el nivel de ruido es muy bajo. Según el modelo utilizado, nuestros resultados sugieren que durante Año nuevo el nivel de ruido ambiental es mayor al de Navidad.
 
