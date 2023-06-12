@@ -69,8 +69,9 @@ figura_anio_nuevo_spl_avg = intervalo_spl %>%
 
 figura_anio_nuevo_spl_avg            
 
-# modelo lineal y visualización
 
+# modelo lineal y visualización
+p1_spl = intervalo_spl
 m1 <- lm(nivel_sonoro_avg ~ intervalo_min, data = p1_spl)
 summary(m1)
 
@@ -129,7 +130,7 @@ ggplot() + geom_col(data = histograma, aes(x = mids, y=density), color='black', 
 
 install.packages('lme4')
 
-mapa.puntos = read.csv("../../puntos.csv", header = TRUE, sep = ',', stringsAsFactors = TRUE)
+mapa.puntos = read.csv("./data/puntosEs.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
 
 install.packages('measurements')
@@ -165,9 +166,43 @@ mapa.puntos %<>% mutate(
 dms2dd(mapa.puntos$Longitud, ns =True)
 mapa.puntos$Longitud(mapa.puntos$Posición == 1)
 
-map <- leaflet() %>%
-  addTiles() %>%
-  addMarkers(lng = mapa.puntos$lng, lat= mapa.puntos$lat,
-             popup = mapa.puntos$Barrio...Comuna)
 
+df.20 <- mapa.puntos
+
+getColor <- function(mapa.puntos) {
+  sapply(mapa.puntos$Fecha, function(Fecha) {
+    if(Fecha == "Experimental") {
+      "red"
+    } else if(Fecha == "nada") {
+      "orange"
+    } else {
+      "green"
+    } })
+}
+
+icons <- awesomeIcons(
+  icon = 'ion-close',
+  iconColor = 'black',
+  library = 'ion',
+markerColor = getColor(df.20)
+)
+
+leaflet(df.20) %>% addTiles() %>%
+  addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha))
+
+
+
+
+
+map <- leaflet(df.20) %>%
+  addTiles() %>%
+  addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha),
+                    popup = mapa.puntos$Barrio...Comuna)%>%
+  addProviderTiles(providers$Esri.WorldStreetMap) %>%
+  addMiniMap(
+    tiles = providers$Esri.WorldStreetMap,
+    toggleDisplay = TRUE)
+#   addProviderTiles(providers$Stamen.Toner)
+# # addProviderTiles(providers$CartoDB.Positron)
 map
+
