@@ -130,7 +130,7 @@ ggplot() + geom_col(data = histograma, aes(x = mids, y=density), color='black', 
 
 install.packages('lme4')
 
-mapa.puntos = read.csv("./data/puntosEs.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+mapa.puntos = read.csv("./data/puntosEs.csv", header = TRUE, sep = ';', stringsAsFactors=TRUE, fileEncoding="latin1")
 
 
 install.packages('measurements')
@@ -171,38 +171,45 @@ df.20 <- mapa.puntos
 
 getColor <- function(mapa.puntos) {
   sapply(mapa.puntos$Fecha, function(Fecha) {
-    if(Fecha == "Experimental") {
+    if(Fecha == "N/AN") {
       "red"
-    } else if(Fecha == "nada") {
-      "orange"
+    } else if(Fecha == "Navidad") {
+      "darkred"
+    } else if(Fecha == "Año nuevo") {
+      "lightred"
     } else {
       "green"
     } })
 }
 
 icons <- awesomeIcons(
-  icon = 'ion-close',
-  iconColor = 'black',
-  library = 'ion',
-markerColor = getColor(df.20)
+  icon = "ion-close",
+  iconColor = "black",
+  library = "ion",
+markerColor = getColor(mapa.puntos)
 )
 
-leaflet(df.20) %>% addTiles() %>%
+
+leaflet(mapa.puntos) %>% addTiles() %>%
   addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha))
 
 
 
 
 
-map <- leaflet(df.20) %>%
+map <- leaflet(mapa.puntos) %>%
   addTiles() %>%
   addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha),
                     popup = mapa.puntos$Barrio...Comuna)%>%
-  addProviderTiles(providers$Esri.WorldStreetMap) %>%
+  #addProviderTiles(providers$Esri.WorldStreetMap) %>%
   addMiniMap(
-    tiles = providers$Esri.WorldStreetMap,
-    toggleDisplay = TRUE)
-#   addProviderTiles(providers$Stamen.Toner)
-# # addProviderTiles(providers$CartoDB.Positron)
+        #tiles = providers$Esri.WorldStreetMap,
+        width = 120,
+        height = 120,
+        zoomLevelOffset = -10,
+    toggleDisplay = TRUE)%>%
+#addProviderTiles(providers$Stamen.Toner)
+#addProviderTiles(providers$CartoDB.Positron)
+addProviderTiles(providers$Esri.NatGeoWorldMap)
 map
 
