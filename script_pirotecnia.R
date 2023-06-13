@@ -12,6 +12,7 @@ a = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
   facet_grid(fecha~punto)
 a
 
+
 ## Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia"
 ## cuando es tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual 
 ## a 3600.
@@ -29,6 +30,12 @@ datos %<>% mutate(fecha = case_when(
   fecha != 'Navidad' ~ 'Anio_nuevo',
   fecha == 'Navidad' ~ 'Navidad',
 ))
+
+ggplot(datos, aes(x = tiempo, y = nivel_sonoro, color = condicion)) + geom_point(alpha = 0.01)+
+  geom_smooth(method = lm, aes(fill=condicion),se=TRUE, fullrange=FALSE)+
+  facet_grid(fecha~.)+
+  theme_bw()
+
 
 datos  %<>%  mutate(intervalo_min = case_when(
       tiempo <= 900 ~  15,
