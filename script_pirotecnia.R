@@ -5,52 +5,107 @@ library(dplyr)
 library(ggpubr)
 library(seewave)
 
-tabla.datos = read.csv("./data/datosR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
-
-a = ggplot(tabla.datos, aes(x=tiempo, y=nivel_sonoro))+
-  geom_point()+
-  facet_grid(fecha~punto)
-a
 
 
-## Agregar a la tabla una fila que sea "condicion" que sea "con pirotecnia"
-## cuando es tiempo es mayor a 3600 y "sin pirotecnia" cuando es menor o igual 
-## a 3600.
-## usando mutate --- 
-tabla.datos
+rm(list=ls())
+figures_folder = "figures"
+table.data = read.csv("./data/dataR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
-datos <- tabla.datos %>%
-  mutate(condicion = case_when(
-    tiempo <= 3600 ~ 'sin_pirotecnia',
-    tiempo > 3600 ~ 'con_pirotecnia',
+table.data <- table.data %>%
+  mutate(condition = case_when(
+    time <= 3600 ~ 'Without fireworks',
+    time > 3600 ~ 'With fireworks',
   ))
 
-# tengo un problema de encoding con la ñ de columna Año Nuevo
-datos %<>% mutate(fecha = case_when(
-  fecha != 'Navidad' ~ 'Anio_nuevo',
-  fecha == 'Navidad' ~ 'Navidad',
-))
-
-ggplot(datos, aes(x = tiempo, y = nivel_sonoro, color = condicion)) + geom_point(alpha = 0.01)+
-  geom_smooth(method = lm, aes(fill=condicion),se=TRUE, fullrange=FALSE)+
-  facet_grid(fecha~.)+
-  theme_bw()
+table.data.all.p <- table.data %>%
+  group_by(point,condition,celebration) %>%
+  summarise(spl_avg_p = meandB(spl, level= "IL"),
+            sd_avg_p = sddB(spl, level = "IL"))
 
 
-datos  %<>%  mutate(intervalo_min = case_when(
-      tiempo <= 900 ~  15,
-      tiempo <= 1800 ~ 30,
-      tiempo <= 2700 ~ 45,
-      tiempo <= 3600 ~ 60,
-      tiempo <= 4500 ~ 75,
-      tiempo <= 5400 ~ 90,
-      tiempo <= 6300 ~ 105,
-      tiempo <= 7200 ~ 120,
-    ))
+table.data.apra = read.csv("./data/dataAPrA.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+table.data.apra$celebration = "Normal day" 
+table.data.apra$condition = "Environmental noise"
 
-intervalo_spl <- datos %>%
-  group_by(punto,fecha,intervalo_min,condicion) %>%
-  summarise(nivel_sonoro_avg = 10*log10(sum(10^(nivel_sonoro/10))/n()))
+table.data.apra.p <- table.data.apra %>%
+  group_by(point, condition, celebration) %>%
+  summarise(spl_avg_p = meandB(LeqA, level= "IL"),
+            sd_avg_p = sddB(LeqA, level = "IL"))
+
+
+table.data.p = merge(table.data.all.p, table.data.apra.p, all=TRUE)
+
+rm("table.data.apra.p","table.data.all.p")
+
+
+table.data.avg <- table.data %>%
+  group_by(time,condition,celebration) %>%
+  summarise(spl_avg = 10*log10(sum(10^(spl/10))/n()))
+
+fig.1 = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01)+
+        geom_smooth(method = lm, aes(fill=condition),se=TRUE, fullrange=FALSE)+
+        facet_grid(.~celebration)+
+        labs(y = "Sound Presure Level [dB]",
+             x = "Time [min]") +
+          theme_bw()+ theme(legend.position= "top", 
+                          legend.title = element_blank(),
+                          legend.text = element_text(size = 8))
+                          
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot=fig.1, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+
+
+ 
+table.data.all <- table.data.p %>%
+  group_by(condition) %>%
+  summarise(spl_avg = meandB(spl_avg_p, level= "IL"),
+            sd_avg = sddB(spl_avg_p, level = "IL"))
+
+
+fig.2 <- ggplot(table.data.all, aes(x = condition, y = spl_avg, fill = condition, color = condition)) +
+                geom_pointrange(aes(x = condition, y = spl_avg, ymin=spl_avg-sd_avg,
+                                    ymax=spl_avg+sd_avg, fill = condition),
+                                size = 1,shape = 2,
+                                position=position_jitter(width=.01, height=0)) +
+  geom_jitter(data = table.data.p, mapping = aes(x = condition, y = spl_avg_p, fill = condition, color = condition),
+              position=position_jitter(width=.08, height=0))+
+  labs(y = "Sound Presure Level [dB]",
+       x = "Celebration") +
+  
+  theme_bw()+ theme(legend.position= "top", 
+                    legend.title = element_blank(),
+                    legend.text = element_text(size = 8))
+fig.2
+ggsave("Figuras/LeqAS.png", plot=fig.LeqAS, width = 15, height = 10, units = "cm", dpi=600, limitsize=FALSE) 
+
+
+# datos  %<>%  mutate(intervalo_min = case_when(
+#       tiempo <= 900 ~  15,
+#       tiempo <= 1800 ~ 30,
+#       tiempo <= 2700 ~ 45,
+#       tiempo <= 3600 ~ 60,
+#       tiempo <= 4500 ~ 75,
+#       tiempo <= 5400 ~ 90,
+#       tiempo <= 6300 ~ 105,
+#       tiempo <= 7200 ~ 120,
+#     ))
+
+supplementary.fig1= ggplot(table.data, aes(x = time, y = spl, color = condition)) + geom_point(alpha = 0.005)+
+  geom_smooth(method = lm, aes(fill=condition),se=TRUE, fullrange=FALSE)+
+  facet_grid(point~celebration)+
+  theme_bw()+ theme(legend.position=c(1,1), legend.title = element_blank(),
+                    legend.key.size = .5 )+
+  labs(y = "Sound Presure Level [dB]",
+       x = "Time [min]") +
+  
+  theme_bw()+ theme(legend.position= "top", 
+                    legend.title = element_blank(),
+                    legend.text = element_text(size = 8))
+
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "supplementary.fig1", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot=supplementary.fig1, width=10, height=25, units="cm", limitsize=FALSE, dpi=600)
+
+
 
 figura_navidad_spl_avg = intervalo_spl %>%
   filter(fecha=='Navidad') %>%
