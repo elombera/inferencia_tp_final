@@ -6,7 +6,6 @@ library(ggpubr)
 library(seewave)
 
 
-
 rm(list=ls())
 figures_folder = "figures"
 table.data = read.csv("./data/dataR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
@@ -17,67 +16,307 @@ table.data <- table.data %>%
     time > 3600 ~ 'With fireworks',
   ))
 
-table.data.all.p <- table.data %>%
-  group_by(point,condition,celebration) %>%
-  summarise(spl_avg_p = meandB(spl, level= "IL"),
-            sd_avg_p = sddB(spl, level = "IL"))
 
+table.data <- table.data %>%
+  mutate(time_interval = case_when(
+    time <= 3600 ~ '60 min',
+    time > 3600 ~ '60 min',
+  ))
+table.data.30 <- table.data %>% mutate(time_interval = case_when(
+  time >= 1800 & time <=3600 ~ "30 min",
+  time > 3600 & time <=5400 ~ "30 min"
+))
+table.data.30 <- na.omit(table.data.30)
+
+table.data.15  <- table.data %>% mutate(time_interval = case_when(
+  time >= 2700 & time <=3600 ~ "15 min",
+  time > 3600 & time <=4500 ~ "15 min"
+))
+table.data.15 <- na.omit(table.data.15)
+
+
+table.data.time = merge(table.data.30, table.data.15, all=TRUE)
+table.data = merge(table.data, table.data.time, all=TRUE)
+rm("table.data.30","table.data.15","table.data.time")
+
+table.data.all.p <- table.data %>%
+  group_by(point,condition,celebration,time_interval) %>%
+  summarise(spl_avg_p = meandB(spl, level= "IL"),
+            sd_avg_p = sddB(spl, level = "IL"),
+            L1 = quantile(spl, probs = c(0.99)),
+            L10 = quantile(spl, probs = c(0.90)),
+            L50 = quantile(spl, probs = c(0.5)),
+            L90 = quantile(spl, probs = c(0.1)))
 
 table.data.apra = read.csv("./data/dataAPrA.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 table.data.apra$celebration = "Normal day" 
 table.data.apra$condition = "Environmental noise"
+table.data.apra$time_interval = "Environmental noise"
 
-table.data.apra.p <- table.data.apra %>%
-  group_by(point, condition, celebration) %>%
+table.data.apra.p <- filter(table.data.apra, point != "P10") %>%
+  group_by(point, condition, celebration,time_interval) %>%
   summarise(spl_avg_p = meandB(LeqA, level= "IL"),
-            sd_avg_p = sddB(LeqA, level = "IL"))
+            sd_avg_p = sddB(LeqA, level = "IL"),
+            L1 = meandB(L1, level= "IL"),
+            L10 = meandB(L10, level = "IL"),
+            L50 = meandB(L50, level= "IL"),
+            L90 = meandB(L90, level = "IL"))
 
 
 table.data.p = merge(table.data.all.p, table.data.apra.p, all=TRUE)
-
+table.data.p             = tibble(table.data.p)
 rm("table.data.apra.p","table.data.all.p")
 
 
 table.data.avg <- table.data %>%
-  group_by(time,condition,celebration) %>%
+  group_by(time,condition,celebration,time_interval) %>%
   summarise(spl_avg = 10*log10(sum(10^(spl/10))/n()))
 
 fig.1 = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01)+
-        geom_smooth(method = lm, aes(fill=condition),se=TRUE, fullrange=FALSE)+
+        geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
         facet_grid(.~celebration)+
         labs(y = "Sound Presure Level [dB]",
-             x = "Time [min]") +
+             x = "Time [sec]") +
           theme_bw()+ theme(legend.position= "top", 
                           legend.title = element_blank(),
                           legend.text = element_text(size = 8))
                           
+fig.1
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
 ggsave(mi_nombre_de_archivo, plot=fig.1, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 
 
- 
 table.data.all <- table.data.p %>%
-  group_by(condition) %>%
+  group_by(condition,time_interval) %>%
   summarise(spl_avg = meandB(spl_avg_p, level= "IL"),
-            sd_avg = sddB(spl_avg_p, level = "IL"))
+            sd_avg = sddB(spl_avg_p, level = "IL"),
+            L1_spl_avg = meandB(L1, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"))
+table.data.all            = tibble(table.data.all)
 
-
-fig.2 <- ggplot(table.data.all, aes(x = condition, y = spl_avg, fill = condition, color = condition)) +
-                geom_pointrange(aes(x = condition, y = spl_avg, ymin=spl_avg-sd_avg,
+fig.2 <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = spl_avg, fill = condition, color = condition)) +
+                geom_pointrange(aes(x = interaction(time_interval,condition), y = spl_avg, ymin=spl_avg-sd_avg,
                                     ymax=spl_avg+sd_avg, fill = condition),
                                 size = 1,shape = 2,
                                 position=position_jitter(width=.01, height=0)) +
-  geom_jitter(data = table.data.p, mapping = aes(x = condition, y = spl_avg_p, fill = condition, color = condition),
+  geom_jitter(data = table.data.p, mapping = aes(x = interaction(time_interval,condition), y = spl_avg_p, fill = condition, color = condition),
               position=position_jitter(width=.08, height=0))+
-  labs(y = "Sound Presure Level [dB]",
-       x = "Celebration") +
+  scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("Normal day","15 min","30 min","60 min","15 min","30 min","60 min"))+
+  labs(y = "Sound Presure Level [dB]") +
   
-  theme_bw()+ theme(legend.position= "top", 
+  theme_bw(base_size = 8)+ theme(legend.position= "top", 
                     legend.title = element_blank(),
                     legend.text = element_text(size = 8))
 fig.2
-ggsave("Figuras/LeqAS.png", plot=fig.LeqAS, width = 15, height = 10, units = "cm", dpi=600, limitsize=FALSE) 
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig2", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot=fig.2, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 
+
+m.L1<- lm(spl_avg_p ~ condition*time_interval*celebration, 
+          data = table.data.p)
+summary(m.L1)
+summ(m.L1)
+anova(m.L1)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+
+
+
+
+
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+
+
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+
+
+
+
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+# L1-------------
+
+m.L1<- lm(L1 ~ condition*time_interval*celebration, 
+          data = table.data.p)
+summary(m.L1)
+summ(m.L1)
+anova(m.L1)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
+
+
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
+
+
+
+
+
+
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
+
+
+
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
+
+
+
+
+
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
 
 # datos  %<>%  mutate(intervalo_min = case_when(
 #       tiempo <= 900 ~  15,
