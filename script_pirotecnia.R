@@ -5,7 +5,6 @@ library(dplyr)
 library(ggpubr)
 library(seewave)
 
-
 rm(list=ls())
 figures_folder = "figures"
 table.data = read.csv("./data/dataR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
@@ -48,10 +47,11 @@ table.data.all.p <- table.data %>%
             L50 = quantile(spl, probs = c(0.5)),
             L90 = quantile(spl, probs = c(0.1)))
 
-table.data.apra = read.csv("./data/dataAPrA.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
+table.data.apra = read.csv("./data/dataAPrA2.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 table.data.apra$celebration = "Normal day" 
 table.data.apra$condition = "Environmental noise"
 table.data.apra$time_interval = "Environmental noise"
+
 
 table.data.apra.p <- filter(table.data.apra, point != "P10") %>%
   group_by(point, condition, celebration,time_interval) %>%
@@ -67,17 +67,29 @@ table.data.p = merge(table.data.all.p, table.data.apra.p, all=TRUE)
 table.data.p             = tibble(table.data.p)
 rm("table.data.apra.p","table.data.all.p")
 
+idx = table.data.p$point == "P4" & table.data.p$time_interval =="15 min" & table.data.p$celebration =="Christmas"
+table.data.p = table.data.p[!idx,] 
+
 
 table.data.avg <- table.data %>%
   group_by(time,condition,celebration,time_interval) %>%
   summarise(spl_avg = 10*log10(sum(10^(spl/10))/n()))
 
-fig.1 = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01)+
-        geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
-        facet_grid(.~celebration)+
+
+cbPalette <- c("red", "blue", "green", "#999999", "#D55E00", "#0072B2", "#CC79A7", "#F0E442")
+
+fig.1 = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01, show.legend = FALSE)+
+  geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
+  geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
+  
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +       
+  facet_grid(.~celebration)+
         labs(y = "Sound Presure Level [dB]",
              x = "Time [sec]") +
-          theme_bw()+ theme(legend.position= "top", 
+  guides(color="none", fill = guide_legend("time_interval"))+
+          theme_bw(base_size = 8)+ theme(legend.position = c(.99, .99),
+                                         legend.justification = c("right", "top"),
                           legend.title = element_blank(),
                           legend.text = element_text(size = 8))
                           
@@ -91,34 +103,97 @@ table.data.all <- table.data.p %>%
   summarise(spl_avg = meandB(spl_avg_p, level= "IL"),
             sd_avg = sddB(spl_avg_p, level = "IL"),
             L1_spl_avg = meandB(L1, level= "IL"),
+            L1_spl_sd = sddB(L1, level= "IL"),
             L10_spl_avg = meandB(L10, level= "IL"),
             L50_spl_avg = meandB(L50, level= "IL"),
             L90_spl_avg = meandB(L90, level= "IL"))
 table.data.all            = tibble(table.data.all)
 
-fig.2 <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = spl_avg, fill = condition, color = condition)) +
+table.data.all$condition = factor(table.data.all$condition, levels= c("With fireworks","Without fireworks","Environmental noise"))
+
+fig.2Leq <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = spl_avg, fill = condition, color = condition)) +
                 geom_pointrange(aes(x = interaction(time_interval,condition), y = spl_avg, ymin=spl_avg-sd_avg,
                                     ymax=spl_avg+sd_avg, fill = condition),
                                 size = 1,shape = 2,
                                 position=position_jitter(width=.01, height=0)) +
   geom_jitter(data = table.data.p, mapping = aes(x = interaction(time_interval,condition), y = spl_avg_p, fill = condition, color = condition),
-              position=position_jitter(width=.08, height=0))+
-  scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("Normal day","15 min","30 min","60 min","15 min","30 min","60 min"))+
-  labs(y = "Sound Presure Level [dB]") +
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +       
+  scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
+  labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]") +
+  ylim(35,112)+
   
-  theme_bw(base_size = 8)+ theme(legend.position= "top", 
+  annotate("text", x = 5.5, y = 76,  label = "***", size = 4) +
+  annotate("segment", x = 4, xend = 7, y = 75, yend = 75, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 6, y = 82,  label = "***", size = 4) +
+  annotate("segment", x = 5, xend = 7, y = 81, yend = 81, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 6.5, y = 88,  label = "***", size = 4) +
+  annotate("segment", x = 6, xend = 7, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  
+  theme_bw(base_size = 8)+ theme(legend.position= "top",
+                                 axis.title.x = element_blank(),
                     legend.title = element_blank(),
                     legend.text = element_text(size = 8))
-fig.2
+fig.2Leq
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig2", ".png", sep = '')
-ggsave(mi_nombre_de_archivo, plot=fig.2, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+ggsave(mi_nombre_de_archivo, plot=fig.2Leq, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 
 
-m.L1<- lm(spl_avg_p ~ condition*time_interval*celebration, 
-          data = table.data.p)
-summary(m.L1)
-summ(m.L1)
-anova(m.L1)
+fig.2L1 <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = L1_spl_avg, fill = condition, color = condition)) +
+  geom_pointrange(aes(x = interaction(time_interval,condition), y = L1_spl_avg, ymin=L1_spl_avg-L1_spl_sd,
+                      ymax=L1_spl_avg+L1_spl_sd, fill = condition),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0)) +
+  geom_jitter(data = table.data.p, mapping = aes(x = interaction(time_interval,condition), y = L1, fill = condition, color = condition),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
+  labs(y = "Statistical noise levels L01 [dB]", size = 1) +
+  ylim(35,112)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +  
+
+  annotate("text", x = 5.5, y = 82,  label = "***", size = 4) +
+  annotate("segment", x = 4, xend = 7, y = 81, yend = 81, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 6, y = 88,  label = "***", size = 4) +
+  annotate("segment", x = 5, xend = 7, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 6.5, y = 94,  label = "***", size = 4) +
+  annotate("segment", x = 6, xend = 7, y = 93, yend = 93, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 4, y = 111,  label = "*", size = 4) +
+  annotate("segment", x = 1, xend = 7, y = 110, yend = 110, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 4.5, y = 105,  label = "*", size = 4) +
+  annotate("segment", x = 2, xend = 7, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+
+  
+  theme_bw(base_size = 8)+ theme(legend.position= "none",
+                                 axis.title.x = element_blank(),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+fig.2L1
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig2L1", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot=fig.2L1, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+
+
+
+Figure1 = ggarrange(fig.1,
+                    ggarrange(fig.2Leq, fig.2L1, ncol = 2, labels = c("B", "C"),common.legend = TRUE, legend="bottom", align = "hv"),
+                    labels = "A",
+                    nrow = 2,
+                    align = "hv")
+Figure1
+ggsave("figures/FIGURE1.png", plot=Figure1, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
+
+
+
+
+# Stadistic analyasis -------------------
+
+m.SPL<- lm(spl_avg_p ~ condition*time_interval*celebration, 
+           data = table.data.p)
+summary(m.SPL)
+summ(m.SPL)
+anova(m.SPL)
 
 
 t.test(filter(table.data.p,
@@ -139,7 +214,6 @@ t.test(filter(table.data.p,
 
 
 
-
 t.test(filter(table.data.p,
               condition =="Environmental noise")$spl_avg_p,
        filter(table.data.p,
@@ -155,10 +229,6 @@ t.test(filter(table.data.p,
        filter(table.data.p,
               condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
        paired = FALSE)
-
-
-
-
 
 
 t.test(filter(table.data.p,
@@ -215,7 +285,7 @@ t.test(filter(table.data.p,
               condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
        paired = FALSE)
 
-# L1-------------
+
 
 m.L1<- lm(L1 ~ condition*time_interval*celebration, 
           data = table.data.p)
@@ -225,17 +295,17 @@ anova(m.L1)
 
 
 t.test(filter(table.data.p,
-              condition =="Environmental noise")$L10,
+              condition =="Environmental noise")$L1,
        filter(table.data.p,
               condition =="With fireworks" & time_interval =="15 min")$L1,
        paired = FALSE)
 t.test(filter(table.data.p,
-              condition =="Environmental noise")$L10,
+              condition =="Environmental noise")$L1,
        filter(table.data.p,
               condition =="With fireworks" & time_interval =="30 min")$L1,
        paired = FALSE)
 t.test(filter(table.data.p,
-              condition =="Environmental noise")$L10,
+              condition =="Environmental noise")$L1,
        filter(table.data.p,
               condition =="With fireworks" & time_interval =="60 min")$L1,
        paired = FALSE)
@@ -341,6 +411,7 @@ supplementary.fig1= ggplot(table.data, aes(x = time, y = spl, color = condition)
                     legend.title = element_blank(),
                     legend.text = element_text(size = 8))
 
+supplementary.fig1
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "supplementary.fig1", ".png", sep = '')
 ggsave(mi_nombre_de_archivo, plot=supplementary.fig1, width=10, height=25, units="cm", limitsize=FALSE, dpi=600)
 
