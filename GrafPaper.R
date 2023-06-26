@@ -90,12 +90,83 @@ map <- leaflet(mapa.puntos) %>%
   # addProviderTiles(providers$CartoDB.Positron)
   # addProviderTiles(providers$Esri.NatGeoWorldMap)
 map
-
+#750 x 600
 mapshot(map, file = "figures/Rplot.png")
 
 
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
 ggsave(mi_nombre_de_archivo, plot=map, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+
+#CHILE
+
+mapa.puntos.chile = read.csv("./data/puntosEsC.csv", header = TRUE, sep = ';', stringsAsFactors=TRUE, fileEncoding="latin1")
+
+chd = substr(mapa.puntos.chile$Ubicacion,3,3)[1]
+chm = substr(mapa.puntos.chile$Ubicacion,6,6)[1]
+chs = substr(mapa.puntos.chile$Ubicacion,9,9)[1]
+
+lat = char2dms(as.character(mapa.puntos.chile$Latitud), chd="°",chm="\'",chs="\"")
+mapa.puntos.chile$lat <- c(as.numeric(lat))
+
+lng =  char2dms(as.character(mapa.puntos.chile$Longitud), chd="°",chm="\'",chs="\"")
+mapa.puntos.chile$lng <- c(as.numeric(lng))
+
+mapa.puntos.chile %<>% mutate(
+  lat = case_when(
+    lat < 0 ~ lat,
+    lat > 0 ~ lat * -1
+  )
+)
+
+
+df.20 <- mapa.puntos.chile
+
+getColor <- function(mapa.puntos.chile) {
+  sapply(mapa.puntos.chile$Fecha, function(Fecha) {
+    if(Fecha == "New Year") {
+      "lightred"
+    } else {
+      "blue"
+    } })
+}
+
+icons <- awesomeIcons(
+  icon = "ion-close",
+  iconColor = "black",
+  library = "ion",
+  markerColor = getColor(mapa.puntos.chile)
+)
+
+
+groups <- c("New Year" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-lightred awesome-marker'><i class='ion ion-close icon-lightred '></i></div>New Year",
+            "Torre Entel" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-blue awesome-marker'><i class='ion ion-close icon-blue '></i></div>Torre Entel")
+
+map <- leaflet(mapa.puntos.chile) %>%
+  addTiles() %>%
+  addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha))%>%
+  #addProviderTiles(providers$Esri.WorldStreetMap) %>%
+  addMiniMap(
+    #tiles = providers$Esri.WorldStreetMap,
+    width = 120,
+    height = 120,
+    zoomLevelOffset = -10,
+    toggleDisplay = TRUE)%>%
+  addLayersControl(                                                                                                           
+    overlayGroups = groups,
+    options = layersControlOptions(collapsed = FALSE)
+  )
+# addControl(html_legend, position = "topright")
+
+# addLegendAwesomeIcon()
+# addControl(icons, position = "bottomleft")
+# addProviderTiles(providers$Stamen.Toner)
+# addProviderTiles(providers$CartoDB.Positron)
+# addProviderTiles(providers$Esri.NatGeoWorldMap)
+map
+
+mapshot(map, file = "figures/Rplot.png")
+
+
 
 
 # FIGURE 2 -------------------------------
