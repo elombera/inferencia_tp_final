@@ -18,13 +18,7 @@ cbPalette <- c("red", "blue", "green", "#999999", "#D55E00", "#0072B2", "#CC79A7
 
 
 # FIGURE 1 ----
-mapa.puntos = read.csv("./data/puntosEs.csv", header = TRUE, sep = ';', stringsAsFactors=TRUE, fileEncoding="latin1")
-
-mapa.puntos %<>% mutate(lat = dms2dd(Latitud,NS=True))
-
-mapa.puntos %<>%mutate(lat= Ubicacion)
-
-mapa.puntos %<>% mutate(lat = as.character.DMS(Ubicacion))
+mapa.puntos = read.csv("./data/puntosEs2.csv", header = TRUE, sep = ';', stringsAsFactors=TRUE, fileEncoding="latin1")
 
 chd = substr(mapa.puntos$Ubicacion,3,3)[1]
 chm = substr(mapa.puntos$Ubicacion,6,6)[1]
@@ -43,19 +37,16 @@ mapa.puntos %<>% mutate(
   )
 )
 
-dms2dd(mapa.puntos$Longitud, ns =True)
-mapa.puntos$Longitud(mapa.puntos$Posición == 1)
-
 
 df.20 <- mapa.puntos
 
 getColor <- function(mapa.puntos) {
   sapply(mapa.puntos$Fecha, function(Fecha) {
-    if(Fecha == "N/AN") {
+    if(Fecha == "Christmas/New Year") {
       "red"
-    } else if(Fecha == "Navidad") {
+    } else if(Fecha == "Christmas") {
       "darkred"
-    } else if(Fecha == "Año nuevo") {
+    } else if(Fecha == "New Year") {
       "lightred"
     } else {
       "green"
@@ -70,11 +61,10 @@ icons <- awesomeIcons(
 )
 
 
-leaflet(mapa.puntos) %>% addTiles() %>%
-  addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha))
-
-
-
+groups <- c("Christmas/New Year" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-red awesome-marker'><i class='ion ion-close icon-red '></i></div>Christmas/New Year",
+            "Christmas" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-darkred awesome-marker'><i class='ion ion-close icon-darkred '></i></div>Christmas",
+            "New Year" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-lightred awesome-marker'><i class='ion ion-close icon-lightred '></i></div>New Year",
+            "Normal Day" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-green awesome-marker'><i class='ion ion-close icon-green '></i></div>Normal Day")
 
 
 map <- leaflet(mapa.puntos) %>%
@@ -88,10 +78,26 @@ map <- leaflet(mapa.puntos) %>%
     height = 120,
     zoomLevelOffset = -10,
     toggleDisplay = TRUE)%>%
-  #addProviderTiles(providers$Stamen.Toner)
-  #addProviderTiles(providers$CartoDB.Positron)
-  addProviderTiles(providers$Esri.NatGeoWorldMap)
+  addLayersControl(                                                                                                           
+    overlayGroups = groups,
+    options = layersControlOptions(collapsed = FALSE)
+  )
+  # addControl(html_legend, position = "topright")
+  
+  # addLegendAwesomeIcon()
+# addControl(icons, position = "bottomleft")
+  # addProviderTiles(providers$Stamen.Toner)
+  # addProviderTiles(providers$CartoDB.Positron)
+  # addProviderTiles(providers$Esri.NatGeoWorldMap)
 map
+
+mapshot(map, file = "figures/Rplot.png")
+
+
+mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
+ggsave(mi_nombre_de_archivo, plot=map, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+
+
 # FIGURE 2 -------------------------------
 
 table.data.avg <- table.data %>%
