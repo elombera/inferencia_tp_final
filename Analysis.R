@@ -4,6 +4,9 @@ library(purrr)
 library(dplyr)
 library(ggpubr)
 library(seewave)
+library(ggstatsplot)
+
+rm(list=ls())
 
 load("./data.RData")
 
@@ -14,6 +17,10 @@ m.SPL<- lm(spl_avg_p ~ condition*time_interval*celebration,
 summary(m.SPL)
 summ(m.SPL)
 anova(m.SPL)
+ggcoefstats(m.SPL, output = "tidy") %>% select(-label)
+# m.emm.VR <- emmeans(m.SPL, "BlindCat", "Reach_Cat")
+# m.emm.VR
+
 
 t.test(filter(table.data.p,
               celebration =="Christmas" & time_interval =="60 min" & condition =="With fireworks")$spl_avg_p,
@@ -244,3 +251,7 @@ t.test(filter(table.data.p,
        paired = FALSE)
 
 
+m.L1<- lm(L90 ~ condition*time_interval*celebration, 
+          data = table.data.p)
+summary(m.L1)
+anova(m.L1)

@@ -273,13 +273,13 @@ fig.2L1
 
 
 
-Figure2 = ggarrange(fig.1a,
+Figure3 = ggarrange(fig.1a,
                     ggarrange(fig.2Leq, fig.2L1, ncol = 2, labels = c("B", "C"),common.legend = TRUE, legend="bottom", align = "hv"),
                     labels = "A",
                     nrow = 2,
                     align = "hv")
-Figure2
-ggsave("figures/FIGURE2.png", plot=Figure1, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
+Figure3
+ggsave("figures/FIGURE3.png", plot=Figure3, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
 
 
 
