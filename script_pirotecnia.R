@@ -44,7 +44,8 @@ table.data.all.p <- table.data %>%
             L1 = quantile(spl, probs = c(0.99)),
             L10 = quantile(spl, probs = c(0.90)),
             L50 = quantile(spl, probs = c(0.5)),
-            L90 = quantile(spl, probs = c(0.1)))
+            L90 = quantile(spl, probs = c(0.1)),
+            LA = meandB(spl, level= "IL") + (10*log10(n())))
 
 table.data.apra = read.csv("./data/dataAPrA2.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 table.data.apra$celebration = "Normal day" 
@@ -59,7 +60,8 @@ table.data.apra.p <- filter(table.data.apra, point != "P10") %>%
             L1 = meandB(L1, level= "IL"),
             L10 = meandB(L10, level = "IL"),
             L50 = meandB(L50, level= "IL"),
-            L90 = meandB(L90, level = "IL"))
+            L90 = meandB(L90, level = "IL"),
+            LA = meandB(LA, level = "IL"))
 
 
 table.data.p = merge(table.data.all.p, table.data.apra.p, all=TRUE)
