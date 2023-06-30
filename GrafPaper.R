@@ -8,6 +8,7 @@ library(measurements)
 library(stringr)
 library(sp)
 library(leaflet)
+library(pBrackets) 
 
 rm(list=ls())
 
@@ -175,9 +176,9 @@ table.data.avg <- table.data %>%
   group_by(time,condition,celebration,time_interval) %>%
   summarise(spl_avg = 10*log10(sum(10^(spl/10))/n()))
 
-fig.1a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01, show.legend = FALSE)+
+fig.2a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01, show.legend = FALSE)+
   geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
-  geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
+  # geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
   
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +       
@@ -190,23 +191,27 @@ fig.1a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) +
                                  legend.title = element_blank(),
                                  legend.text = element_text(size = 8))
 
-fig.1a
+fig.2a
 # mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
 # ggsave(mi_nombre_de_archivo, plot=fig.1a, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 
 
-table.data.all <- table.data.p %>%
-  group_by(condition,time_interval) %>%
-  summarise(spl_avg = meandB(spl_avg_p, level= "IL"),
-            sd_avg = sddB(spl_avg_p, level = "IL"),
-            L1_spl_avg = meandB(L1, level= "IL"),
-            L1_spl_sd = sddB(L1, level= "IL"),
-            L10_spl_avg = meandB(L10, level= "IL"),
-            L50_spl_avg = meandB(L50, level= "IL"),
-            L90_spl_avg = meandB(L90, level= "IL"))
-table.data.all            = tibble(table.data.all)
+# table.data.all <- table.data.p %>%
+#   group_by(condition,time_interval) %>%
+#   summarise(spl_avg = meandB(spl_avg_p, level= "IL"),
+#             sd_avg = sddB(spl_avg_p, level = "IL"),
+#             L1_spl_avg = meandB(L1, level= "IL"),
+#             L1_spl_sd = sddB(L1, level= "IL"),
+#             L10_spl_avg = meandB(L10, level= "IL"),
+#             L1_spl_sd = sddB(L10, level= "IL"),
+#             L50_spl_avg = meandB(L50, level= "IL"),
+#             L1_spl_sd = sddB(L50, level= "IL"),
+#             L90_spl_avg = meandB(L90, level= "IL"),
+#             L1_spl_sd = sddB(L90, level= "IL"))
+# table.data.all            = tibble(table.data.all)
 
 table.data.all$condition = factor(table.data.all$condition, levels= c("With fireworks","Without fireworks","Environmental noise"))
+
 
 fig.2Leq <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = spl_avg, fill = condition, color = condition)) +
   geom_pointrange(aes(x = interaction(time_interval,condition), y = spl_avg, ymin=spl_avg-sd_avg,
@@ -220,19 +225,46 @@ fig.2Leq <- ggplot(table.data.all, aes(x = interaction(time_interval,condition),
   scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
   labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]") +
   ylim(35,112)+
+
+  annotate("segment", x = 0.8, xend = 3.2, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 0.8, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.2, xend = 3.2, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
   
-  annotate("text", x = 5.5, y = 76,  label = "***", size = 4) +
-  annotate("segment", x = 4, xend = 7, y = 75, yend = 75, colour = "black", size=.5, alpha=1,)+
-  annotate("text", x = 6, y = 82,  label = "***", size = 4) +
-  annotate("segment", x = 5, xend = 7, y = 81, yend = 81, colour = "black", size=.5, alpha=1,)+
-  annotate("text", x = 6.5, y = 88,  label = "***", size = 4) +
-  annotate("segment", x = 6, xend = 7, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 2, y = 87, yend = 92, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 5, y = 92, yend = 92, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 5, y = 87, yend = 92, colour = "black", size=.5, alpha=1,)+
   
+  annotate("segment", x = 3.8, xend = 6.2, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 3.5, y = 94,  label = "***", size = 4) +
+  
+
+  annotate("segment", x = 3.8, xend = 6.2, y = 72, yend = 72, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 69, yend = 72, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 69, yend = 72, colour = "black", size=.5, alpha=1,)+
+  
+  
+  annotate("segment", x = 5, xend = 5, y = 72, yend = 77, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 7, y = 77, yend = 77, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 7, xend = 7, y = 72, yend = 77, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 6, y = 79,  label = "***", size = 4) +
+  # annotate("text", x = 5.5, y = 76,  label = "***", size = 4) +
+  # annotate("segment", x = 4, xend = 7, y = 75, yend = 75, colour = "black", size=.5, alpha=1,)+
+  # annotate("text", x = 6, y = 82,  label = "***", size = 4) +
+  # annotate("segment", x = 5, xend = 7, y = 81, yend = 81, colour = "black", size=.5, alpha=1,)+
+  # annotate("text", x = 6.5, y = 88,  label = "***", size = 4) +
+  # annotate("segment", x = 6, xend = 7, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  # 
   theme_bw(base_size = 8)+ theme(legend.position= "top",
                                  axis.title.x = element_blank(),
                                  legend.title = element_blank(),
                                  legend.text = element_text(size = 8))
 fig.2Leq
+
+
 # mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig2", ".png", sep = '')
 # ggsave(mi_nombre_de_archivo, plot=fig.2Leq, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 
@@ -250,18 +282,57 @@ fig.2L1 <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), 
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +  
   
-  annotate("text", x = 5.5, y = 82,  label = "***", size = 4) +
-  annotate("segment", x = 4, xend = 7, y = 81, yend = 81, colour = "black", size=.5, alpha=1,)+
-  annotate("text", x = 6, y = 88,  label = "***", size = 4) +
-  annotate("segment", x = 5, xend = 7, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
-  annotate("text", x = 6.5, y = 94,  label = "***", size = 4) +
-  annotate("segment", x = 6, xend = 7, y = 93, yend = 93, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 3.2, y = 95, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 0.8, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.2, xend = 3.2, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
   
-  annotate("text", x = 4, y = 111,  label = "*", size = 4) +
-  annotate("segment", x = 1, xend = 7, y = 110, yend = 110, colour = "black", size=.5, alpha=1,)+
-  annotate("text", x = 4.5, y = 105,  label = "*", size = 4) +
-  annotate("segment", x = 2, xend = 7, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 2, y = 95, yend = 100, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 5, y = 100, yend = 100, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 5, y = 95, yend = 100, colour = "black", size=.5, alpha=1,)+
   
+  annotate("segment", x = 3.8, xend = 6.2, y = 95, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 3.5, y = 102,  label = "***", size = 4) +
+  
+  
+  annotate("segment", x = 3.8, xend = 6.2, y = 80, yend = 80, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 77, yend = 80, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 77, yend = 80, colour = "black", size=.5, alpha=1,)+
+  
+  
+  annotate("segment", x = 5, xend = 5, y = 80, yend = 85, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 7, y = 85, yend = 85, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 7, xend = 7, y = 80, yend = 85, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 6, y = 87,  label = "***", size = 4) +
+  
+  
+  
+  annotate("segment", x = 0.8, xend = 2.2, y = 107, yend = 107, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 0.8, y = 105, yend = 107, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2.2, xend = 2.2, y = 105, yend = 107, colour = "black", size=.5, alpha=1,)+
+  
+  
+  annotate("segment", x = 1.5, xend = 1.5, y = 107, yend = 110, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 1.5, xend = 7, y = 110, yend = 110, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 7, xend = 7, y = 107, yend = 110, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 4, y = 112,  label = "*", size = 4) +
+  
+  # annotate("text", x = 5.5, y = 82,  label = "***", size = 4) +
+  # annotate("segment", x = 4, xend = 7, y = 81, yend = 81, colour = "black", size=.5, alpha=1,)+
+  # annotate("text", x = 6, y = 88,  label = "***", size = 4) +
+  # annotate("segment", x = 5, xend = 7, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  # annotate("text", x = 6.5, y = 94,  label = "***", size = 4) +
+  # annotate("segment", x = 6, xend = 7, y = 93, yend = 93, colour = "black", size=.5, alpha=1,)+
+  # 
+  # annotate("text", x = 4, y = 111,  label = "*", size = 4) +
+  # annotate("segment", x = 1, xend = 7, y = 110, yend = 110, colour = "black", size=.5, alpha=1,)+
+  # annotate("text", x = 4.5, y = 105,  label = "*", size = 4) +
+  # annotate("segment", x = 2, xend = 7, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+  # 
   
   theme_bw(base_size = 8)+ theme(legend.position= "none",
                                  axis.title.x = element_blank(),
@@ -273,7 +344,7 @@ fig.2L1
 
 
 
-Figure3 = ggarrange(fig.1a,
+Figure3 = ggarrange(fig.2a,
                     ggarrange(fig.2Leq, fig.2L1, ncol = 2, labels = c("B", "C"),common.legend = TRUE, legend="bottom", align = "hv"),
                     labels = "A",
                     nrow = 2,
@@ -290,7 +361,7 @@ table.data.avg <- table.data.chile %>%
   group_by(time,condition) %>%
   summarise(spl_avg = 10*log10(sum(10^(Leq/10))/n()))
 
-fig.1a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 1, show.legend = FALSE)+
+fig.3a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 1, show.legend = FALSE)+
   # geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
   #geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
   
@@ -305,7 +376,7 @@ fig.1a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) +
                                  legend.title = element_blank(),
                                  legend.text = element_text(size = 8))
 
-fig.1a
+fig.3a
 mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
 ggsave(mi_nombre_de_archivo, plot=fig.1a, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 

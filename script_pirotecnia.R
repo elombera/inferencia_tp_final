@@ -70,7 +70,19 @@ table.data.p = table.data.p[!idx,]
 table.data.p             = tibble(table.data.p)
 rm("table.data.apra.p","table.data.all.p")
 
-
+table.data.all <- table.data.p %>%
+  group_by(condition,time_interval) %>%
+  summarise(spl_avg = meandB(spl_avg_p, level= "IL"),
+            sd_avg = sddB(spl_avg_p, level = "IL"),
+            L1_spl_avg = meandB(L1, level= "IL"),
+            L1_spl_sd = sddB(L1, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L1_spl_sd = sddB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L1_spl_sd = sddB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"),
+            L1_spl_sd = sddB(L90, level= "IL"))
+table.data.all            = tibble(table.data.all)
 
 
 table.data.prom = read.csv("./data/dataR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
@@ -132,7 +144,7 @@ table.data.chile$country = "Chile"
 
 table.data.comparision = merge(table.data.comparision, table.data.chile, all=TRUE)
 
-save(table.data, table.data.p, table.data.comparision, file = 'data.RData')
+save(table.data, table.data.p, table.data.all, table.data.comparision, file = 'data.RData')
 
 
 #old ----
