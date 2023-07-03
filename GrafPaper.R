@@ -15,7 +15,7 @@ rm(list=ls())
 load("./data.RData")
 
 figures_folder = "figures"
-cbPalette <- c("red", "blue", "green", "#999999", "#D55E00", "#0072B2", "#CC79A7", "#F0E442")
+cbPalette <- c("red", "blue", "green", "#999999", "#D55E00", "#0072B2", "#CC79A7", "#F0E442","black","yellow","orange","lightgreen","lightblue","red" )
 
 
 # FIGURE 1 ----
@@ -357,14 +357,30 @@ ggsave("figures/FIGURE3.png", plot=Figure3, width = 17, height = 17, units = "cm
 
 
 # FIGURE 3 ------
-table.data.avg <- table.data.chile %>%
-  group_by(time,condition) %>%
-  summarise(spl_avg = 10*log10(sum(10^(Leq/10))/n()))
+table.data.avg.arg <- filter(table.data.comparision, country == "Argentina") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.arg$point = "mean"
 
-fig.3a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 1, show.legend = FALSE)+
+table.data.avg.chi.l <- filter(table.data.comparision, country == "Chile", point == "P1" | point == "P4") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.chi.l$point = "P1 and P4"
+
+table.data.avg.chi.c <- filter(table.data.comparision, country == "Chile", point == "P2" | point == "P3") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.chi.c$point = "P2 and P3"
+
+
+
+table.data.comparision3 = merge(table.data.avg.chi.c,table.data.avg.arg,all=TRUE)
+
+table.data.comparision2 = merge(table.data.comparision3, table.data.avg.chi.l,all=TRUE)
+fig.3a = ggplot(table.data.comparision2, aes(x = time, y = Leq, color = country, fill = point)) + geom_point(alpha = 1, show.legend = T)+
   # geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
   #geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
-  
+  geom_line()+
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +       
   #facet_grid(.~celebration)+
