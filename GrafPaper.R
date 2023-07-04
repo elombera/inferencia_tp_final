@@ -376,11 +376,11 @@ table.data.avg.chi.c$point = "P2 and P3"
 
 table.data.comparision3 = merge(table.data.avg.chi.c,table.data.avg.arg,all=TRUE)
 
-table.data.comparision2 = merge(table.data.comparision3, table.data.avg.chi.l,all=TRUE)
-fig.3a = ggplot(table.data.comparision2, aes(x = time, y = Leq, color = country, fill = point)) + geom_point(alpha = 1, show.legend = T)+
-  # geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
+table.data.comparision2 = merge(filter(table.data.comparision3, country == "Chile"), table.data.avg.chi.l,all=TRUE)
+fig.3a = ggplot(table.data.comparision2, aes(x = time, y = Leq, color = condition)) + geom_point(alpha = 1, show.legend = T)+
+  geom_smooth(method = lm, aes(fill=interaction(condition, point), linetype = point, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
   #geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
-  geom_line()+
+  # geom_line(aes(fill = point))+
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +       
   #facet_grid(.~celebration)+
