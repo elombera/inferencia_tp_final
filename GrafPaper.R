@@ -357,35 +357,22 @@ ggsave("figures/FIGURE3.png", plot=Figure3, width = 17, height = 17, units = "cm
 
 
 # FIGURE 3 ------
-table.data.avg.arg <- filter(table.data.comparision, country == "Argentina") %>%
+table.data.avg.chi <- filter(table.data.comparision, country == "Chile") %>%
   group_by(time,condition,country) %>%
   summarise(Leq = meandB(Leq, level = "IL"))
-table.data.avg.arg$point = "mean"
-
-table.data.avg.chi.l <- filter(table.data.comparision, country == "Chile", point == "P1" | point == "P4") %>%
-  group_by(time,condition,country) %>%
-  summarise(Leq = meandB(Leq, level = "IL"))
-table.data.avg.chi.l$point = "P1 and P4"
-
-table.data.avg.chi.c <- filter(table.data.comparision, country == "Chile", point == "P2" | point == "P3") %>%
-  group_by(time,condition,country) %>%
-  summarise(Leq = meandB(Leq, level = "IL"))
-table.data.avg.chi.c$point = "P2 and P3"
 
 
+fig.3a = ggplot(table.data.avg.chi, aes(x = time, y = Leq)) + geom_line(linetype = 2,show.legend = TRUE)+
+  geom_point(aes(color = condition),alpha = 1, show.legend = T,size = 2)+
+   
+  # geom_line(data = table.f4,mapping = aes(x = time, y = Leq, fill = point))+
 
-table.data.comparision3 = merge(table.data.avg.chi.c,table.data.avg.arg,all=TRUE)
-
-table.data.comparision2 = merge(filter(table.data.comparision3, country == "Chile"), table.data.avg.chi.l,all=TRUE)
-fig.3a = ggplot(table.data.comparision2, aes(x = time, y = Leq, color = condition)) + geom_point(alpha = 1, show.legend = T)+
-  geom_smooth(method = lm, aes(fill=interaction(condition, point), linetype = point, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
-  #geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
-  # geom_line(aes(fill = point))+
   scale_colour_manual(values = cbPalette) + 
-  scale_fill_manual(values = cbPalette) +       
+  scale_fill_manual(values = cbPalette) +   
   #facet_grid(.~celebration)+
-  labs(y = "Sound Presure Level [dB]",
-       x = "Time [sec]") +
+    labs(y = "Sound Presure Level [dB]",
+       x = "Time [min]") +
+  ylim(60,100)+
   #guides(color="none", fill = guide_legend("time_interval"))+
   theme_bw(base_size = 8)+ theme(legend.position = c(.99, .99),
                                  legend.justification = c("right", "top"),
@@ -393,8 +380,60 @@ fig.3a = ggplot(table.data.comparision2, aes(x = time, y = Leq, color = conditio
                                  legend.text = element_text(size = 8))
 
 fig.3a
-mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
-ggsave(mi_nombre_de_archivo, plot=fig.1a, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+# mi_nombre_de_archivo = paste(figures_folder, .Platform$file.sep, "Fig1", ".png", sep = '')
+# ggsave(mi_nombre_de_archivo, plot=fig.1a, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
+
+
+# table.data.avg.arg <- filter(table.data.comparision, country == "Argentina") %>%
+#   group_by(time,condition,country) %>%
+#   summarise(Leq = meandB(Leq, level = "IL"))
+# table.data.avg.arg$point = "mean"
+# 
+# 
+# table.f3 = merge(table.data.comparision,table.data.avg.arg,all=TRUE)
+# table.data.comparision2 = merge(filter(table.data.comparision3, country == "Chile"), table.data.avg.chi.l,all=TRUE)
+
+table.data.avg.chi.l <- filter(table.data.comparision, country == "Chile", point == "P1" | point == "P4") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.chi.l$point = "Nearby points"
+
+table.data.avg.chi.c <- filter(table.data.comparision, country == "Chile", point == "P2" | point == "P3") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.chi.c$point = "Far points"
+
+table.f4 = merge(table.data.avg.chi.l,table.data.avg.chi.c,all=TRUE)
+
+
+fig.3b = ggplot(table.f4, aes(x = time, y = Leq)) + geom_point(aes(color = condition),alpha = 1, show.legend = T,size = 2)+ 
+  geom_line(aes(linetype = point))+
+  # geom_smooth(method = lm, aes(fill=condition, linetype = condition, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
+  #geom_hline(yintercept = 66.4, color = "green", alpha = .5, size = 2)+
+  # geom_line(aes(fill = point))+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +       
+  #facet_grid(.~celebration)+
+  labs(y = "Sound Presure Level [dB]",
+       x = "Time [min]") +
+  ylim(60,100)+
+  #guides(color="none", fill = guide_legend("time_interval"))+
+  theme_bw(base_size = 8)+ theme(legend.position = c(.99, .99),
+                                 legend.justification = c("right", "top"),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+
+fig.3b
+
+Figure4 = ggarrange(fig.3a, fig.3b,
+                    labels = c("A","B"),
+                    ncol = 2,
+                    align = "hv")
+Figure4
+ggsave("figures/FIGURE3.png", plot=Figure3, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
+
+
+
 
 
 # FI
