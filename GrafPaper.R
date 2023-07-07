@@ -372,9 +372,9 @@ fig.3a = ggplot(table.data.avg.chi, aes(x = time, y = Leq)) + geom_line(linetype
   #facet_grid(.~celebration)+
     labs(y = "Sound Presure Level [dB]",
        x = "Time [min]") +
-  ylim(60,100)+
+  ylim(60,96)+
   #guides(color="none", fill = guide_legend("time_interval"))+
-  theme_bw(base_size = 8)+ theme(legend.position = c(.99, .99),
+  theme_bw(base_size = 8)+ theme(legend.position = "none",
                                  legend.justification = c("right", "top"),
                                  legend.title = element_blank(),
                                  legend.text = element_text(size = 8))
@@ -384,10 +384,7 @@ fig.3a
 # ggsave(mi_nombre_de_archivo, plot=fig.1a, width=14, height=7, units="cm", limitsize=FALSE, dpi=600)
 
 
-# table.data.avg.arg <- filter(table.data.comparision, country == "Argentina") %>%
-#   group_by(time,condition,country) %>%
-#   summarise(Leq = meandB(Leq, level = "IL"))
-# table.data.avg.arg$point = "mean"
+
 # 
 # 
 # table.f3 = merge(table.data.comparision,table.data.avg.arg,all=TRUE)
@@ -414,25 +411,177 @@ fig.3b = ggplot(table.f4, aes(x = time, y = Leq)) + geom_point(aes(color = condi
   scale_colour_manual(values = cbPalette) + 
   scale_fill_manual(values = cbPalette) +       
   #facet_grid(.~celebration)+
-  labs(y = "Sound Presure Level [dB]",
+  labs(y = "Sound Presure Level [dB]\naccording to location to source ",
        x = "Time [min]") +
-  ylim(60,100)+
+  ylim(60,96)+
   #guides(color="none", fill = guide_legend("time_interval"))+
-  theme_bw(base_size = 8)+ theme(legend.position = c(.99, .99),
+  theme_bw(base_size = 8)+ theme(legend.position = "top",
                                  legend.justification = c("right", "top"),
                                  legend.title = element_blank(),
                                  legend.text = element_text(size = 8))
 
 fig.3b
 
-Figure4 = ggarrange(fig.3a, fig.3b,
-                    labels = c("A","B"),
-                    ncol = 2,
+
+# table.data.avg.chi.l <- filter(table.data.comparision, country == "Chile", point == "P1" | point == "P4") %>%
+#   group_by(point,condition,country) %>%
+#   summarise(spl_avg = meandB(Leq, level = "IL"),
+#             spl_avg_sd = sddB(Leq, level= "IL"),
+#             L5_spl_avg = meandB(L5, level= "IL"),
+#             L5_spl_sd = sddB(L5, level= "IL"),
+#             L10_spl_avg = meandB(L10, level= "IL"),
+#             L10_spl_sd = sddB(L10, level= "IL"),
+#             L50_spl_avg = meandB(L50, level= "IL"),
+#             L1_spl_sd = sddB(L50, level= "IL"),
+#             L90_spl_avg = meandB(L90, level= "IL"),
+#             L90_spl_sd = sddB(L90, level= "IL"))
+# table.data.avg.chi.l$label = "Nearby points"
+# 
+# table.data.avg.chi.c <- filter(table.data.comparision, country == "Chile", point == "P2" | point == "P3") %>%
+#   group_by(point,condition,country) %>%
+#   summarise(spl_avg = meandB(Leq, level = "IL"),
+#             spl_avg_sd = sddB(Leq, level= "IL"),
+#             L5_spl_avg = meandB(L5, level= "IL"),
+#             L5_spl_sd = sddB(L5, level= "IL"),
+#             L10_spl_avg = meandB(L10, level= "IL"),
+#             L10_spl_sd = sddB(L10, level= "IL"),
+#             L50_spl_avg = meandB(L50, level= "IL"),
+#             L1_spl_sd = sddB(L50, level= "IL"),
+#             L90_spl_avg = meandB(L90, level= "IL"),
+#             L90_spl_sd = sddB(L90, level= "IL"))
+# table.data.avg.chi.c$label = "Far points"
+# 
+# 
+# table.data.avg.chile = merge(table.data.avg.chi.l,table.data.avg.chi.c,all=TRUE)
+# 
+# table.data.avg.arg <- filter(table.data.comparision, country == "Argentina") %>%
+#   group_by(point,condition,country) %>%
+#   summarise(spl_avg = meandB(Leq, level = "IL"),
+#             spl_avg_sd = sddB(Leq, level= "IL"),
+#             L5_spl_avg = meandB(L5, level= "IL"),
+#             L5_spl_sd = sddB(L5, level= "IL"),
+#             L10_spl_avg = meandB(L10, level= "IL"),
+#             L10_spl_sd = sddB(L10, level= "IL"),
+#             L50_spl_avg = meandB(L50, level= "IL"),
+#             L1_spl_sd = sddB(L50, level= "IL"),
+#             L90_spl_avg = meandB(L90, level= "IL"),
+#             L90_spl_sd = sddB(L90, level= "IL"))
+# table.data.avg.arg$label = "All points"
+# 
+# table.data.avg.comparision = merge(table.data.avg.chile,table.data.avg.arg,all=TRUE)
+# 
+# table.full.comparision <- table.data.avg.comparision %>%
+#   group_by(condition,country,label) %>%
+#   summarise(LeqM = meandB(spl_avg, level = "IL"),
+#             Leq_sdM = sddB(spl_avg, level= "IL"),
+#             L5_spl_avgM = meandB( L5_spl_avg, level= "IL"),
+#             L5_spl_sdM = sddB( L5_spl_avg, level= "IL"),
+#             L10_spl_avgM = meandB(L10_spl_avg, level= "IL"),
+#             L10_spl_sdM = sddB(L10_spl_avg, level= "IL"),
+#             L50_spl_avgM = meandB( L50_spl_avg, level= "IL"),
+#             L1_spl_sdM = sddB(L50_spl_avg, level= "IL"),
+#             L90_spl_avgM = meandB(L90_spl_avg, level= "IL"),
+#             L90_spl_sdM = sddB(L90_spl_avg, level= "IL"))
+# 
+
+
+
+
+table.data.comparision.avg = table.data.comparision %>%
+  group_by(point,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"),
+            L5_spl_avg = meandB(L5, level= "IL"),
+            L5_spl_sd = sddB(L5, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L10_spl_sd = sddB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L50_spl_sd = sddB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"),
+            L90_spl_sd = sddB(L90, level= "IL"))
+
+table.data.comparision.avg <- table.data.comparision.avg %>%
+  mutate(location_to_source = case_when(
+    point == "P1" & country == "Chile" ~ 'Nearby points',
+    point == "P4" & country == "Chile" ~ 'Nearby points',
+    point == "P3" & country == "Chile" ~ "Far points",
+    point == "P2" & country == "Chile" ~ "Far points",
+  ))
+
+idx = table.data.comparision.avg$country == "Argentina"
+table.data.comparision.avg[idx,]$location_to_source = "random"
+
+table.data.comparision.avg.pob = table.data.comparision.avg %>%
+  group_by(condition,country) %>%
+  summarise(Leq_p = meandB(Leq, level = "IL"),
+            sd_p = sddB(Leq, level= "IL"))
+
+cbPalette2 <- c("orange","darkgreen","#D55E00", "#0072B2", "#CC79A7", "#F0E442","black","yellow","orange","lightgreen","lightblue","red" )
+
+fig.3CLeq <- ggplot(filter(table.data.comparision.avg.pob, condition == "With fireworks"), aes(x = country, y = Leq_p, colour = country)) +
+  geom_pointrange(aes(x = country, y = Leq_p, ymin=Leq_p-sd_p,
+                      ymax=Leq_p+sd_p),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0), show.legend = TRUE) +
+  geom_jitter(data = filter(table.data.comparision.avg, condition == "With fireworks"), mapping = aes(x = country, y = Leq, color = country),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  # scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
+  labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]",
+       x = "Country - With fireworks") +
+  ylim(35,112)+  ylim(35,112)+
+  scale_colour_manual(values = cbPalette2) + 
+  scale_fill_manual(values = cbPalette2) +  
+  
+  annotate("text", x = 1.5, y = 105,  label = "***", size = 4) +
+  annotate("segment", x = 1, xend = 2, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+
+theme_bw(base_size = 8)+ theme(legend.position= "top",
+                               legend.title = element_blank(),
+                               legend.text = element_text(size = 8))
+
+
+
+fig.3CLeq 
+
+table.data.comparision.avg.located = table.data.comparision.avg %>%
+  group_by(condition,country,location_to_source) %>%
+  summarise(Leq_p = meandB(Leq, level = "IL"),
+            sd_p = sddB(Leq, level= "IL"))
+
+fig.3DLeq <- ggplot(filter(table.data.comparision.avg.located, condition == "With fireworks"), aes(x = interaction(country,location_to_source), y = Leq_p, colour = country)) +
+  geom_pointrange(aes(x = interaction(country,location_to_source), y = Leq_p, ymin=Leq_p-sd_p,
+                      ymax=Leq_p+sd_p),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0), show.legend = TRUE) +
+  geom_jitter(data = filter(table.data.comparision.avg, condition == "With fireworks"), mapping = aes(x = interaction(country,location_to_source), y = Leq, color = country),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  # scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
+  labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]",
+       x = "Country - With fireworks") +
+  ylim(35,112)+  ylim(35,112)+
+  scale_colour_manual(values = cbPalette2) + 
+  scale_fill_manual(values = cbPalette2) +  
+  
+  annotate("text", x = 1.5, y = 100,  label = "*", size = 4) +
+  annotate("segment", x = 1, xend = 2, y = 99, yend = 99, colour = "black", size=.5, alpha=1,)+
+  
+  annotate("text", x = 2.5, y = 105,  label = "***", size = 4) +
+  annotate("segment", x = 2, xend = 3, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+  
+  theme_bw(base_size = 8)+ theme(legend.position= "top",
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+
+
+
+fig.3DLeq 
+
+
+Figure4 = ggarrange(ggarrange(fig.3a,fig.3b, ncol = 2, labels = c("A", "B"),common.legend = TRUE, legend="top", align = "hv"),
+                    ggarrange(fig.3CLeq,fig.3DLeq, ncol = 2, labels = c("C", "D"),common.legend = TRUE, legend="bottom", align = "hv"),
+                    nrow = 2,
                     align = "hv")
 Figure4
-ggsave("figures/FIGURE3.png", plot=Figure3, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
-
-
+ggsave("figures/FIGURE3.png", plot=Figure4, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
 
 
 

@@ -363,11 +363,73 @@ table.data.comparision.avg = table.data.comparision %>%
             L10_spl_avg = meandB(L10, level= "IL"),
             L10_spl_sd = sddB(L10, level= "IL"),
             L50_spl_avg = meandB(L50, level= "IL"),
-            L1_spl_sd = sddB(L50, level= "IL"),
+            L50_spl_sd = sddB(L50, level= "IL"),
             L90_spl_avg = meandB(L90, level= "IL"),
             L90_spl_sd = sddB(L90, level= "IL"))
 
+table.data.comparision.avg <- table.data.comparision.avg %>%
+  mutate(location_to_source = case_when(
+    point == "P1" & country == "Chile" ~ 'Nearby points',
+    point == "P4" & country == "Chile" ~ 'Nearby points',
+    point == "P3" & country == "Chile" ~ "Far points",
+    point == "P2" & country == "Chile" ~ "Far points",
+  ))
 
+idx = table.data.comparision.avg$country == "Argentina"
+table.data.comparision.avg[idx,]$location_to_source = "random"
+
+
+
+table.data.comparision.avg.Chile <- filter(table.data.comparision.avg, country == "Chile") %>%
+  mutate(location_to_source = case_when(
+    point == "P1" ~ 'Nearby points',
+    point == "P4" ~ 'Nearby points',
+    point == "P3" ~ "Far points",
+    point == "P2" ~ "Far points",
+  ))
+
+m.SPL<- lm(Leq ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+#Leq
+m.SPL<- lm(Leq ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+#L5
+m.L5<- lm(L5_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L5)
+extract_stats(ggcoefstats(m.L5))
+anova(m.L5)
+
+#L10
+m.L10<- lm(L10_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L10)
+extract_stats(ggcoefstats(m.L10))
+anova(m.L10)
+
+#L50
+m.L50<- lm(L50_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L50)
+extract_stats(ggcoefstats(m.L50))
+anova(m.L50)
+
+#L90
+m.L90<- lm(L90_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L90)
+extract_stats(ggcoefstats(m.L90))
+anova(m.L90)
+
+# aaaaa
 m.SPL<- lm(Leq ~ condition*country, 
            data = table.data.comparision.avg)
 summary(m.SPL)

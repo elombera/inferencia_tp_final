@@ -86,7 +86,7 @@ table.data.all            = tibble(table.data.all)
 
 
 table.data.prom = read.csv("./data/dataR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
-table.data.avg.prom <- table.data.prom %>%
+table.data.avg.prom <- filter(table.data.prom, celebration == "New Year") %>%
   group_by(point,time) %>%
   summarise(Leq = meandB(spl, level= "IL"),
             L5 = quantile(spl, probs = c(0.95)),
