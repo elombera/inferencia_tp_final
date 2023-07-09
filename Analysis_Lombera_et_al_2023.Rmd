@@ -1,0 +1,852 @@
+---
+title: 'Assessment of noise pollution of fireworks during Christmas and New Year in
+  to the city of Santiago de Chile'
+  the city of Buenos Aires: comparison with a different management strategy applied
+author: "Esteban N Lombera"
+date: "2023-07-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(purrr)
+library(dplyr)
+library(ggpubr)
+library(seewave)
+library(measurements)
+library(stringr)
+library(sp)
+library(leaflet)
+library(pBrackets) 
+library(ggstatsplot)
+```
+
+<style>
+  body {
+    text-align: justify
+  }
+</style>
+
+# Data preparation
+
+```{r rows.print=6}
+rm(list=ls())
+load("./data.RData")
+```
+
+## FIGURE1
+Figure 1: Geographical distribution of the measurement points evaluated during holidays and non-holidays. The icons marked in red represent the positions of measurements taken on both holidays. The dark red icons represent the measurement points for Christmas, while the light red icons represent the measurement points for New Year's Day. The icons in green represent the measurement points provided by Environmental Protection Agency (CABA - Argentina).
+```{r figure1, echo=FALSE}
+chd = substr(map.points.argentina$Ubicacion,3,3)[1]
+chm = substr(map.points.argentina$Ubicacion,6,6)[1]
+chs = substr(map.points.argentina$Ubicacion,9,9)[1]
+lat = char2dms(as.character(map.points.argentina$Latitud), chd="°",chm="\'",chs="\"")
+map.points.argentina$lat <- c(as.numeric(lat))
+lng =  char2dms(as.character(map.points.argentina$Longitud), chd="°",chm="\'",chs="\"")
+map.points.argentina$lng <- c(as.numeric(lng))
+map.points.argentina %<>% mutate(
+  lat = case_when(
+    lat < 0 ~ lat,
+    lat > 0 ~ lat * -1
+  )
+)
+
+df.20 <- map.points.argentina
+getColor <- function(map.points.argentina) {
+  sapply(map.points.argentina$Fecha, function(Fecha) {
+    if(Fecha == "Christmas/New Year") {
+      "red"
+    } else if(Fecha == "Christmas") {
+      "darkred"
+    } else if(Fecha == "New Year") {
+      "lightred"
+    } else {
+      "green"
+    } })
+}
+
+icons <- awesomeIcons(
+  icon = "ion-close",
+  iconColor = "black",
+  library = "ion",
+  markerColor = getColor(map.points.argentina)
+)
+
+groups <- c("Christmas/New Year" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-red awesome-marker'><i class='ion ion-close icon-red '></i></div>Christmas/New Year",
+            "Christmas" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-darkred awesome-marker'><i class='ion ion-close icon-darkred '></i></div>Christmas",
+            "New Year" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-lightred awesome-marker'><i class='ion ion-close icon-lightred '></i></div>New Year",
+            "Normal Day" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-green awesome-marker'><i class='ion ion-close icon-green '></i></div>Normal Day")
+
+map <- leaflet(map.points.argentina) %>%
+  addTiles() %>%
+  addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha),
+                    popup = map.points.argentina$Barrio...Comuna)%>%
+  addMiniMap(
+    width = 120,
+    height = 120,
+    zoomLevelOffset = -10,
+    toggleDisplay = TRUE)%>%
+  addLayersControl(                                                                                                           
+    overlayGroups = groups,
+    options = layersControlOptions(collapsed = FALSE)
+  )
+map
+```
+
+## FIGURE2
+Figure 2: Geographical distribution of the measurement points evaluated during New Years Day in Santiago de Chile, Chile. The icons marked in light red represent the measurement points for New Year's Day provided by the Department of Noise, Light, and Odor of the Ministry of the Environment of Chile. The icon marked in blue dot represents the location of the Entel tower where the pyrotechnic event took place.
+```{r figure2, echo=FALSE}
+chd = substr(map.points.chile$Ubicacion,3,3)[1]
+chm = substr(map.points.chile$Ubicacion,6,6)[1]
+chs = substr(map.points.chile$Ubicacion,9,9)[1]
+lat = char2dms(as.character(map.points.chile$Latitud), chd="°",chm="\'",chs="\"")
+map.points.chile$lat <- c(as.numeric(lat))
+lng =  char2dms(as.character(map.points.chile$Longitud), chd="°",chm="\'",chs="\"")
+map.points.chile$lng <- c(as.numeric(lng))
+map.points.chile %<>% mutate(
+  lat = case_when(
+    lat < 0 ~ lat,
+    lat > 0 ~ lat * -1
+  )
+)
+
+df.20 <- map.points.chile
+getColor <- function(map.points.chile) {
+  sapply(map.points.chile$Fecha, function(Fecha) {
+    if(Fecha == "New Year") {
+      "lightred"
+    } else {
+      "blue"
+    } })
+}
+icons <- awesomeIcons(
+  icon = "ion-close",
+  iconColor = "black",
+  library = "ion",
+  markerColor = getColor(map.points.chile)
+)
+
+groups <- c("New Year" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-lightred awesome-marker'><i class='ion ion-close icon-lightred '></i></div>New Year",
+            "Torre Entel" <- "<div style='position: relative; display: inline-block' class='awesome-marker-icon-blue awesome-marker'><i class='ion ion-close icon-blue '></i></div>Torre Entel")
+
+map <- leaflet(map.points.chile) %>%
+  addTiles() %>%
+  addAwesomeMarkers(~lng, ~lat, icon=icons, label=~as.character(Fecha))%>%
+  addMiniMap(
+    width = 120,
+    height = 120,
+    zoomLevelOffset = -10,
+    toggleDisplay = TRUE)%>%
+  addLayersControl(                                                                                                           
+    overlayGroups = groups,
+    options = layersControlOptions(collapsed = FALSE)
+  )
+map
+```
+
+## FIGURE3
+Figure 3: (A) Sound pressure level mean (dBA) as a function of the time, corresponding to the 2020 Christmas (right) and New Year (left) celebrations. The points in blue color represent the condition without fireworks and in red the condition with fireworks. The lines represent the linear model adjusted according to the time interval and condition. (B) Equivalent continuous sound pressure level (Leq,A) and (C) percent exceedance level (L01) collapsed across time and festive day (mean ± sd) for the intervals time. In green, the measurement data of a normal day in CABA is represented. Each point represents an individual measurement location.
+```{r figure3, echo=FALSE}
+cbPalette <- c("red", "blue", "green", "#999999", "#D55E00", "#0072B2", "#CC79A7", "#F0E442","black","yellow","orange","lightgreen","lightblue","red" )
+table.data.avg <- table.data %>%
+  group_by(time,condition,celebration,time_interval) %>%
+  summarise(spl_avg = 10*log10(sum(10^(spl/10))/n()))
+
+fig.3a = ggplot(table.data.avg, aes(x = time, y = spl_avg, color = condition)) + geom_point(alpha = 0.01, show.legend = FALSE)+
+  geom_smooth(method = lm, aes(fill=time_interval, linetype = time_interval, color = condition),size = .5,se=FALSE, fullrange=FALSE)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +       
+  facet_grid(.~celebration)+
+  labs(y = "Sound Presure Level [dB]",
+       x = "Time [sec]") +
+  guides(color="none", fill = guide_legend("time_interval"))+
+  theme_bw(base_size = 8)+ theme(legend.position = c(.99, .99),
+                                 legend.justification = c("right", "top"),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+table.data.all$condition = factor(table.data.all$condition, levels= c("With fireworks","Without fireworks","Environmental noise"))
+fig.3Leq <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = spl_avg, fill = condition, color = condition)) +
+  geom_pointrange(aes(x = interaction(time_interval,condition), y = spl_avg, ymin=spl_avg-sd_avg,
+                      ymax=spl_avg+sd_avg, fill = condition),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0)) +
+  geom_jitter(data = table.data.p, mapping = aes(x = interaction(time_interval,condition), y = spl_avg_p, fill = condition, color = condition),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +       
+  scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
+  labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]") +
+  ylim(35,112)+
+  annotate("segment", x = 0.8, xend = 3.2, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 0.8, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.2, xend = 3.2, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 2, y = 87, yend = 92, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 5, y = 92, yend = 92, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 5, y = 87, yend = 92, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 6.2, y = 87, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 84, yend = 87, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 3.5, y = 94,  label = "***", size = 4) +
+  annotate("segment", x = 3.8, xend = 6.2, y = 72, yend = 72, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 69, yend = 72, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 69, yend = 72, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 5, y = 72, yend = 77, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 7, y = 77, yend = 77, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 7, xend = 7, y = 72, yend = 77, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 6, y = 79,  label = "***", size = 4) +
+  theme_bw(base_size = 8)+ theme(legend.position= "top",
+                                 axis.title.x = element_blank(),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+fig.3L1 <- ggplot(table.data.all, aes(x = interaction(time_interval,condition), y = L1_spl_avg, fill = condition, color = condition)) +
+  geom_pointrange(aes(x = interaction(time_interval,condition), y = L1_spl_avg, ymin=L1_spl_avg-L1_spl_sd,
+                      ymax=L1_spl_avg+L1_spl_sd, fill = condition),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0)) +
+  geom_jitter(data = table.data.p, mapping = aes(x = interaction(time_interval,condition), y = L1, fill = condition, color = condition),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  scale_x_discrete(name="Interval of time in celebration days vs Normal day ", labels=c("15 min","30 min","60 min","15 min","30 min","60 min","Normal day"))+
+  labs(y = "Statistical noise levels L01 [dB]", size = 1) +
+  ylim(35,112)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +  
+  annotate("segment", x = 0.8, xend = 3.2, y = 95, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 0.8, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.2, xend = 3.2, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 2, y = 95, yend = 100, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2, xend = 5, y = 100, yend = 100, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 5, y = 95, yend = 100, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 6.2, y = 95, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 92, yend = 95, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 3.5, y = 102,  label = "***", size = 4) +
+  annotate("segment", x = 3.8, xend = 6.2, y = 80, yend = 80, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 3.8, xend = 3.8, y = 77, yend = 80, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 6.2, xend = 6.2, y = 77, yend = 80, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 5, y = 80, yend = 85, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 5, xend = 7, y = 85, yend = 85, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 7, xend = 7, y = 80, yend = 85, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 6, y = 87,  label = "***", size = 4) +
+  annotate("segment", x = 0.8, xend = 2.2, y = 107, yend = 107, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 0.8, xend = 0.8, y = 105, yend = 107, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 2.2, xend = 2.2, y = 105, yend = 107, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 1.5, xend = 1.5, y = 107, yend = 110, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 1.5, xend = 7, y = 110, yend = 110, colour = "black", size=.5, alpha=1,)+
+  annotate("segment", x = 7, xend = 7, y = 107, yend = 110, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 4, y = 112,  label = "*", size = 4) +
+  theme_bw(base_size = 8)+ theme(legend.position= "none",
+                                 axis.title.x = element_blank(),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+
+Figure3 = ggarrange(fig.3a,
+                    ggarrange(fig.3Leq, fig.3L1, ncol = 2, labels = c("B", "C"),common.legend = TRUE, legend="bottom", align = "hv"),
+                    labels = "A",
+                    nrow = 2,
+                    align = "hv")
+Figure3
+```
+
+## FIGURE3
+Figure 3: (A) Sound pressure level mean (dBA) as a function of the time, corresponding to the 2020 Christmas (right) and New Year (left) celebrations. The points in blue color represent the condition without fireworks and in red the condition with fireworks. The lines represent the linear model adjusted according to the time interval and condition. (B) Equivalent continuous sound pressure level (Leq,A) and (C) percent exceedance level (L01) collapsed across time and festive day (mean ± sd) for the intervals time. In green, the measurement data of a normal day in CABA is represented. Each point represents an individual measurement location.
+```{r figure4, echo=FALSE}
+cbPalette <- c("red", "blue", "green", "#999999", "#D55E00", "#0072B2", "#CC79A7", "#F0E442","black","yellow","orange","lightgreen","lightblue","red" )
+table.data.avg.chi <- filter(table.data.comparision, country == "Chile") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+
+fig.4a = ggplot(table.data.avg.chi, aes(x = time, y = Leq)) + geom_line(linetype = 2,show.legend = TRUE)+
+  geom_point(aes(color = condition),alpha = 1, show.legend = T,size = 2)+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +   
+    labs(y = "Sound Presure Level [dB]",
+       x = "Time [min]") +
+  ylim(60,96)+
+  theme_bw(base_size = 8)+ theme(legend.position = "none",
+                                 legend.justification = c("right", "top"),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+
+table.data.avg.chi.l <- filter(table.data.comparision, country == "Chile", point == "P1" | point == "P4") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.chi.l$point = "Nearby points"
+table.data.avg.chi.c <- filter(table.data.comparision, country == "Chile", point == "P2" | point == "P3") %>%
+  group_by(time,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"))
+table.data.avg.chi.c$point = "Far points"
+table.f4 = merge(table.data.avg.chi.l,table.data.avg.chi.c,all=TRUE)
+fig.4b = ggplot(table.f4, aes(x = time, y = Leq)) + geom_point(aes(color = condition),alpha = 1, show.legend = T,size = 2)+ 
+  geom_line(aes(linetype = point))+
+  scale_colour_manual(values = cbPalette) + 
+  scale_fill_manual(values = cbPalette) +       
+  labs(y = "Sound Presure Level [dB]\naccording to location to source ",
+       x = "Time [min]") +
+  ylim(60,96)+
+  theme_bw(base_size = 8)+ theme(legend.position = "top",
+                                 legend.justification = c("right", "top"),
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+table.data.comparision.avg = table.data.comparision %>%
+  group_by(point,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"),
+            L5_spl_avg = meandB(L5, level= "IL"),
+            L5_spl_sd = sddB(L5, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L10_spl_sd = sddB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L50_spl_sd = sddB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"),
+            L90_spl_sd = sddB(L90, level= "IL"))
+table.data.comparision.avg <- table.data.comparision.avg %>%
+  mutate(location_to_source = case_when(
+    point == "P1" & country == "Chile" ~ 'Nearby points',
+    point == "P4" & country == "Chile" ~ 'Nearby points',
+    point == "P3" & country == "Chile" ~ "Far points",
+    point == "P2" & country == "Chile" ~ "Far points",
+  ))
+idx = table.data.comparision.avg$country == "Argentina"
+table.data.comparision.avg[idx,]$location_to_source = "random"
+table.data.comparision.avg.pob = table.data.comparision.avg %>%
+  group_by(condition,country) %>%
+  summarise(Leq_p = meandB(Leq, level = "IL"),
+            sd_p = sddB(Leq, level= "IL"))
+
+cbPalette2 <- c("orange","darkgreen","#D55E00", "#0072B2", "#CC79A7", "#F0E442","black","yellow","orange","lightgreen","lightblue","red" )
+
+fig.4CLeq <- ggplot(filter(table.data.comparision.avg.pob, condition == "With fireworks"), aes(x = country, y = Leq_p, colour = country)) +
+  geom_pointrange(aes(x = country, y = Leq_p, ymin=Leq_p-sd_p,
+                      ymax=Leq_p+sd_p),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0), show.legend = TRUE) +
+  geom_jitter(data = filter(table.data.comparision.avg, condition == "With fireworks"), mapping = aes(x = country, y = Leq, color = country),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]",
+       x = "Country - With fireworks") +
+  ylim(35,112)+  ylim(35,112)+
+  scale_colour_manual(values = cbPalette2) + 
+  scale_fill_manual(values = cbPalette2) +  
+  annotate("text", x = 1.5, y = 105,  label = "***", size = 4) +
+  annotate("segment", x = 1, xend = 2, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+theme_bw(base_size = 8)+ theme(legend.position= "top",
+                               legend.title = element_blank(),
+                               legend.text = element_text(size = 8))
+table.data.comparision.avg.located = table.data.comparision.avg %>%
+  group_by(condition,country,location_to_source) %>%
+  summarise(Leq_p = meandB(Leq, level = "IL"),
+            sd_p = sddB(Leq, level= "IL"))
+
+fig.4DLeq <- ggplot(filter(table.data.comparision.avg.located, condition == "With fireworks"), aes(x = interaction(country,location_to_source), y = Leq_p, colour = country)) +
+  geom_pointrange(aes(x = interaction(country,location_to_source), y = Leq_p, ymin=Leq_p-sd_p,
+                      ymax=Leq_p+sd_p),
+                  size = 1,shape = 2,
+                  position=position_jitter(width=.01, height=0), show.legend = TRUE) +
+  geom_jitter(data = filter(table.data.comparision.avg, condition == "With fireworks"), mapping = aes(x = interaction(country,location_to_source), y = Leq, color = country),
+              position=position_jitter(width=.08, height=0),alpha = .7,size =0.7)+
+  labs(y = "Equivalent Continuous\nSound Pressure Level LeqA [dBA]",
+       x = "Country - With fireworks") +
+  ylim(35,112)+  ylim(35,112)+
+  scale_colour_manual(values = cbPalette2) + 
+  scale_fill_manual(values = cbPalette2) +  
+  annotate("text", x = 1.5, y = 100,  label = "*", size = 4) +
+  annotate("segment", x = 1, xend = 2, y = 99, yend = 99, colour = "black", size=.5, alpha=1,)+
+  annotate("text", x = 2.5, y = 105,  label = "***", size = 4) +
+  annotate("segment", x = 2, xend = 3, y = 104, yend = 104, colour = "black", size=.5, alpha=1,)+
+  theme_bw(base_size = 8)+ theme(legend.position= "top",
+                                 legend.title = element_blank(),
+                                 legend.text = element_text(size = 8))
+Figure4 = ggarrange(ggarrange(fig.4a,fig.4b, ncol = 2, labels = c("A", "B"),common.legend = TRUE, legend="top", align = "hv"),
+                    ggarrange(fig.4CLeq,fig.4DLeq, ncol = 2, labels = c("C", "D"),common.legend = TRUE, legend="bottom", align = "hv"),
+                    nrow = 2,
+                    align = "hv")
+Figure4
+```
+
+# Comparison Measurement points on festive days ----
+```{r analysis, echo=FALSE}
+m.SPL<- lm(spl_avg_p ~ condition*time_interval*celebration, 
+           data = filter(table.data.p, celebration != "Normal day"))
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+m.LA<- lm(LA ~ condition*time_interval*celebration, 
+          data = filter(table.data.p, celebration != "Normal day"))
+summary(m.LA)
+extract_stats(ggcoefstats(m.LA))
+anova(m.LA)
+
+m.L1<- lm(L1 ~ condition*time_interval*celebration, 
+          data = filter(table.data.p, celebration != "Normal day"))
+summary(m.L1)
+extract_stats(ggcoefstats(m.L1))
+anova(m.L1)
+
+m.L10<- lm(L10 ~ condition*time_interval*celebration, 
+           data = filter(table.data.p, celebration != "Normal day"))
+summary(m.L10)
+extract_stats(ggcoefstats(m.L10))
+anova(m.L10)
+
+m.L50<- lm(L50 ~ condition*time_interval*celebration, 
+           data = filter(table.data.p, celebration != "Normal day"))
+summary(m.L50)
+extract_stats(ggcoefstats(m.L50))
+anova(m.L50)
+
+m.L90<- lm(L90 ~ condition*time_interval*celebration, 
+           data = filter(table.data.p, celebration != "Normal day"))
+summary(m.L90)
+extract_stats(ggcoefstats(m.L90))
+anova(m.L90)
+```
+
+# Comparison with normal environmental noise levels in CABA ----
+```{r analysis2, echo=FALSE}
+
+
+m.SPL<- lm(spl_avg_p ~ condition*time_interval, 
+           data = table.data.p)
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+m.LA<- lm(LA ~ condition*time_interval, 
+           data = table.data.p)
+summary(m.LA)
+extract_stats(ggcoefstats(m.LA))
+anova(m.LA)
+
+m.L1<- lm(L1 ~ condition*time_interval, 
+           data = table.data.p)
+summary(m.L1)
+extract_stats(ggcoefstats(m.L1))
+anova(m.L1)
+
+m.L10<- lm(L10 ~ condition*time_interval, 
+           data = table.data.p)
+summary(m.L10)
+extract_stats(ggcoefstats(m.L10))
+anova(m.L10)
+
+m.L50<- lm(L50 ~ condition*time_interval, 
+           data = table.data.p)
+summary(m.L50)
+extract_stats(ggcoefstats(m.L50))
+anova(m.L50)
+
+m.L90<- lm(L90 ~ condition*time_interval, 
+           data = table.data.p)
+summary(m.L90)
+extract_stats(ggcoefstats(m.L90))
+anova(m.L90)
+
+# LeqA - t-test -----------
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$spl_avg_p,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$spl_avg_p,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$spl_avg_p,
+       paired = FALSE)
+
+
+# LA - t-test -----------
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$LA,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$LA,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$LA,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$LA,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$LA,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$LA,
+       paired = FALSE)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$LA,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$LA,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$LA,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$LA,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$LA,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$LA,
+       paired = FALSE)
+
+# L1 - t-test -----------
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L1,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L1,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L1,
+       paired = FALSE)
+
+# L10 - t-test -----------
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L10,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L10,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L10,
+       paired = FALSE)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L10,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L10,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L10,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L10,
+       paired = FALSE)
+# L50 - t-test -----------
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L50,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L50,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L50,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L50,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L50,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L50,
+       paired = FALSE)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L50,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L50,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L50,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L50,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L50,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L50,
+       paired = FALSE)
+# L90 - t-test -----------
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L90,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="15 min")$L90,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L90,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="30 min")$L90,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L90,
+       filter(table.data.p,
+              condition =="With fireworks" & time_interval =="60 min")$L90,
+       paired = FALSE)
+
+
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L90,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="15 min")$L90,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L90,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="30 min")$L90,
+       paired = FALSE)
+t.test(filter(table.data.p,
+              condition =="Environmental noise")$L90,
+       filter(table.data.p,
+              condition =="Without fireworks" & time_interval =="60 min")$L90,
+       paired = FALSE)
+
+```
+
+# Comparison measurement points on festive days in Argentina with Chile ----
+
+```{r analysis3, echo=FALSE}
+table.data.comparision.avg = table.data.comparision %>%
+  group_by(point,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"),
+            L5_spl_avg = meandB(L5, level= "IL"),
+            L5_spl_sd = sddB(L5, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L10_spl_sd = sddB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L50_spl_sd = sddB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"),
+            L90_spl_sd = sddB(L90, level= "IL"))
+
+table.data.comparision.avg <- table.data.comparision.avg %>%
+  mutate(location_to_source = case_when(
+    point == "P1" & country == "Chile" ~ 'Nearby points',
+    point == "P4" & country == "Chile" ~ 'Nearby points',
+    point == "P3" & country == "Chile" ~ "Far points",
+    point == "P2" & country == "Chile" ~ "Far points",
+  ))
+
+idx = table.data.comparision.avg$country == "Argentina"
+table.data.comparision.avg[idx,]$location_to_source = "random"
+
+
+
+table.data.comparision.avg.Chile <- filter(table.data.comparision.avg, country == "Chile") %>%
+  mutate(location_to_source = case_when(
+    point == "P1" ~ 'Nearby points',
+    point == "P4" ~ 'Nearby points',
+    point == "P3" ~ "Far points",
+    point == "P2" ~ "Far points",
+  ))
+
+m.SPL<- lm(Leq ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+#Leq
+m.SPL<- lm(Leq ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+#L5
+m.L5<- lm(L5_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L5)
+extract_stats(ggcoefstats(m.L5))
+anova(m.L5)
+
+#L10
+m.L10<- lm(L10_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L10)
+extract_stats(ggcoefstats(m.L10))
+anova(m.L10)
+
+#L50
+m.L50<- lm(L50_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L50)
+extract_stats(ggcoefstats(m.L50))
+anova(m.L50)
+
+#L90
+m.L90<- lm(L90_spl_avg ~ condition*location_to_source, 
+           data = table.data.comparision.avg.Chile)
+summary(m.L90)
+extract_stats(ggcoefstats(m.L90))
+anova(m.L90)
+
+# aaaaa
+m.SPL<- lm(Leq ~ condition*country, 
+           data = table.data.comparision.avg)
+summary(m.SPL)
+extract_stats(ggcoefstats(m.SPL))
+anova(m.SPL)
+
+m.L5<- lm(L5_spl_avg ~ condition*country, 
+          data = table.data.comparision.avg)
+summary(m.L5)
+extract_stats(ggcoefstats(m.L5))
+anova(m.L5)
+
+m.L10<- lm(L10_spl_avg ~ condition*country, 
+           data = table.data.comparision.avg)
+summary(m.L10)
+extract_stats(ggcoefstats(m.L10))
+anova(m.L10)
+
+m.L50<- lm(L50_spl_avg ~ condition*country, 
+           data = table.data.comparision.avg)
+summary(m.L50)
+extract_stats(ggcoefstats(m.L50))
+anova(m.L50)
+
+m.L90<- lm(L90_spl_avg ~ condition*country, 
+           data = table.data.comparision.avg)
+summary(m.L90)
+extract_stats(ggcoefstats(m.L90))
+anova(m.L90)
+
+#  - t-test  calculated separate averages based on the distance to the noise source, labeled as "Near" and "Far". -----------
+
+table.data.avg.chi.l <- filter(table.data.comparision, country == "Chile", point == "P1" | point == "P4") %>%
+  group_by(point,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"),
+            L5_spl_avg = meandB(L5, level= "IL"),
+            L5_spl_sd = sddB(L5, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L10_spl_sd = sddB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L1_spl_sd = sddB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"),
+            L90_spl_sd = sddB(L90, level= "IL"))
+table.data.avg.chi.l$label = "Nearby points"
+
+table.data.avg.chi.c <- filter(table.data.comparision, country == "Chile", point == "P2" | point == "P3") %>%
+  group_by(point,condition,country) %>%
+  summarise(Leq = meandB(Leq, level = "IL"),
+            L5_spl_avg = meandB(L5, level= "IL"),
+            L5_spl_sd = sddB(L5, level= "IL"),
+            L10_spl_avg = meandB(L10, level= "IL"),
+            L10_spl_sd = sddB(L10, level= "IL"),
+            L50_spl_avg = meandB(L50, level= "IL"),
+            L1_spl_sd = sddB(L50, level= "IL"),
+            L90_spl_avg = meandB(L90, level= "IL"),
+            L90_spl_sd = sddB(L90, level= "IL"))
+table.data.avg.chi.c$label = "Far points"
+
+table.data.avg.chile = merge(table.data.avg.chi.l,table.data.avg.chi.c,all=TRUE)
+
+
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$Leq,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Nearby points")$Leq,
+       paired = FALSE)
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$Leq,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Far points")$Leq,
+       paired = FALSE)
+
+
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L5_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Nearby points")$L5_spl_avg,
+       paired = FALSE)
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L5_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Far points")$L5_spl_avg,
+       paired = FALSE)
+
+
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L10_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Nearby points")$L10_spl_avg,
+       paired = FALSE)
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L10_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Far points")$L10_spl_avg,
+       paired = FALSE)
+
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L50_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Nearby points")$L50_spl_avg,
+       paired = FALSE)
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L50_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Far points")$L50_spl_avg,
+       paired = FALSE)
+
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L90_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Nearby points")$L90_spl_avg,
+       paired = FALSE)
+t.test(filter(table.data.comparision.avg,
+              condition =="With fireworks" & country =="Argentina")$L90_spl_avg,
+       filter(table.data.avg.chile,
+              condition =="With fireworks" & label =="Far points")$L90_spl_avg,
+       paired = FALSE)
+```

@@ -581,7 +581,7 @@ Figure4 = ggarrange(ggarrange(fig.3a,fig.3b, ncol = 2, labels = c("A", "B"),comm
                     nrow = 2,
                     align = "hv")
 Figure4
-ggsave("figures/FIGURE3.png", plot=Figure4, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
+ggsave("figures/FIGURE4.png", plot=Figure4, width = 17, height = 17, units = "cm", dpi=600, limitsize=FALSE,bg = "white")  
 
 
 

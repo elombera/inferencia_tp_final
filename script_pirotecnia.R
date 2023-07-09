@@ -6,7 +6,8 @@ library(ggpubr)
 library(seewave)
 
 rm(list=ls())
-
+map.points.argentina = read.csv("./data/puntosEs2.csv", header = TRUE, sep = ';', stringsAsFactors=TRUE, fileEncoding="latin1")
+map.points.chile = read.csv("./data/puntosEsC.csv", header = TRUE, sep = ';', stringsAsFactors=TRUE, fileEncoding="latin1")
 table.data = read.csv("./data/dataR.csv", header = TRUE, sep = ';', stringsAsFactors = TRUE)
 
 table.data <- table.data %>%
@@ -144,7 +145,7 @@ table.data.chile$country = "Chile"
 
 table.data.comparision = merge(table.data.comparision, table.data.chile, all=TRUE)
 
-save(table.data, table.data.p, table.data.all, table.data.comparision, file = 'data.RData')
+save(table.data, table.data.p, table.data.all, table.data.comparision,map.points.argentina,map.points.chile, file = 'data.RData')
 
 
 #old ----
